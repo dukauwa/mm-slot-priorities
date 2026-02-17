@@ -157,8 +157,27 @@ const ClockIcon = () => (
   </svg>
 );
 
+/* ── Responsive hook ──────────────────────────────────────── */
+function useWindowWidth() {
+  const [width, setWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1440);
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  return width;
+}
+
+const BP_MOBILE = 768;   // ≤ 768px  → single column, stacked layout
+const BP_TABLET = 1024;  // ≤ 1024px → narrower sidebar, tighter spacing
+
 /* ── Main Component ──────────────────────────────────────── */
 export default function SlotPriorities() {
+  const windowWidth = useWindowWidth();
+  const isMobile = windowWidth <= BP_MOBILE;
+  const isTablet = windowWidth <= BP_TABLET;
+  const [showPreview, setShowPreview] = useState(false); // mobile preview toggle
+
   const [rules, setRules] = useState([]);
   const [idCounter, setIdCounter] = useState(0);
   const [showBuilder, setShowBuilder] = useState(false);
@@ -371,7 +390,9 @@ export default function SlotPriorities() {
   const unsetCount = stats["unset"] || 0;
   const priorityStatKeys = Object.keys(stats).filter((k) => k !== "unset").sort((a, b) => parseInt(a) - parseInt(b));
 
-  /* ── Styles ──────────────────────────────────────────── */
+  /* ── Styles (responsive) ─────────────────────────────── */
+  const fieldWidth = isMobile ? "100%" : 248;
+
   const s = {
     page: {
       height: "100vh",
@@ -389,7 +410,7 @@ export default function SlotPriorities() {
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
-      padding: "16px 24px",
+      padding: isMobile ? "12px 16px" : "16px 24px",
       borderBottom: `1px solid ${colors.grey20}`,
       borderLeft: `5px solid ${colors.purple}`,
       background: colors.white,
@@ -397,61 +418,87 @@ export default function SlotPriorities() {
       position: "sticky",
       top: 0,
       zIndex: 50,
+      gap: isMobile ? 12 : 0,
     },
-    headerLeft: { display: "flex", alignItems: "center", gap: 36 },
-    logo: { height: 27, display: "block" },
-    headerTitle: { ...font.bold, fontSize: 18, color: colors.grey100, letterSpacing: -0.1 },
+    headerLeft: { display: "flex", alignItems: "center", gap: isMobile ? 12 : 36, minWidth: 0 },
+    logo: { height: isMobile ? 22 : 27, display: "block", flexShrink: 0 },
+    headerTitle: {
+      ...font.bold, fontSize: isMobile ? 14 : 18, color: colors.grey100, letterSpacing: -0.1,
+      whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+    },
     goBackBtn: {
       display: "flex", alignItems: "center", gap: 8,
-      padding: "8px 24px 8px 16px", border: `1px solid ${colors.purple}`,
+      padding: isMobile ? "6px 10px" : "8px 24px 8px 16px",
+      border: `1px solid ${colors.purple}`,
       borderRadius: 4, background: colors.white, cursor: "pointer",
       ...font.bold, fontSize: 12, color: colors.purple, letterSpacing: 0.25,
+      flexShrink: 0,
     },
 
     /* Main body (below header) — both cols scroll independently */
-    body: { display: "flex", flex: 1, minHeight: 0, overflow: "hidden" },
+    body: {
+      display: "flex", flex: 1, minHeight: 0, overflow: isMobile ? "auto" : "hidden",
+      flexDirection: isMobile ? "column" : "row",
+    },
 
     /* Left column */
-    leftCol: { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", overflowY: "auto" },
+    leftCol: {
+      flex: 1, minWidth: 0, display: "flex", flexDirection: "column",
+      overflowY: isMobile ? "visible" : "auto",
+    },
 
     /* Title bar (with Add Rule) */
     titleBar: {
-      display: "flex", gap: 40, alignItems: "flex-end",
-      padding: "24px 32px", borderBottom: `1px solid ${colors.grey20}`,
+      display: "flex",
+      gap: isMobile ? 16 : 40,
+      alignItems: isMobile ? "stretch" : "flex-end",
+      flexDirection: isMobile ? "column" : "row",
+      padding: isMobile ? "20px 16px" : "24px 32px",
+      borderBottom: `1px solid ${colors.grey20}`,
       flexShrink: 0,
     },
     titleContent: { flex: 1, display: "flex", flexDirection: "column", gap: 4 },
-    h1: { ...font.semibold, fontSize: 20, color: colors.grey100, letterSpacing: -0.14 },
+    h1: { ...font.semibold, fontSize: isMobile ? 18 : 20, color: colors.grey100, letterSpacing: -0.14 },
     subtitle: { ...font.regular, fontSize: 12, color: colors.grey100, letterSpacing: 0.25, lineHeight: 1.4 },
     addRuleBtn: {
       display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
       height: 32, padding: "4px 16px 4px 8px", border: `1px solid ${colors.purple}`,
       borderRadius: 4, background: colors.white, cursor: "pointer",
       ...font.bold, fontSize: 14, color: colors.purple, letterSpacing: 0.25, flexShrink: 0,
+      ...(isMobile ? { alignSelf: "flex-start" } : {}),
     },
 
     /* Rules list area */
-    rulesArea: { padding: "16px 32px", display: "flex", flexDirection: "column", gap: 16, flex: 1 },
+    rulesArea: {
+      padding: isMobile ? "16px 16px" : "16px 32px",
+      display: "flex", flexDirection: "column", gap: 16, flex: 1,
+    },
 
     /* Rule item — new flat style */
     ruleItem: {
       background: colors.white, border: `1px solid ${colors.grey20}`, borderRadius: 4,
-      padding: 16, display: "flex", flexDirection: "column", gap: 0,
+      padding: isMobile ? 12 : 16, display: "flex", flexDirection: "column", gap: 0,
       cursor: "pointer", transition: "border-color 0.15s, background 0.15s",
     },
     ruleItemExpanded: {
       background: colors.white, border: `1px solid ${colors.purple}`, borderRadius: 4,
-      padding: 16, display: "flex", flexDirection: "column", gap: 0,
+      padding: isMobile ? 12 : 16, display: "flex", flexDirection: "column", gap: 0,
       cursor: "pointer",
     },
-    ruleRow: { display: "flex", alignItems: "center", gap: 16, width: "100%" },
+    ruleRow: {
+      display: "flex", alignItems: "center", gap: isMobile ? 8 : 16, width: "100%",
+      flexWrap: isMobile ? "wrap" : "nowrap",
+    },
     rulePriorityBadge: {
       background: colors.purple10, borderRadius: 27, padding: "8px 12px",
       ...font.regular, fontSize: 12, color: colors.purple, letterSpacing: 0.25,
       display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
       minWidth: 20,
     },
-    ruleDescription: { flex: 1, ...font.bold, fontSize: 14, color: colors.grey100, letterSpacing: 0.25, lineHeight: 1.4 },
+    ruleDescription: {
+      flex: 1, ...font.bold, fontSize: isMobile ? 13 : 14, color: colors.grey100,
+      letterSpacing: 0.25, lineHeight: 1.4, minWidth: 0,
+    },
     ruleActions: { display: "flex", gap: 4, alignItems: "center", flexShrink: 0 },
     actionBtn: {
       width: 32, height: 32, border: "none", background: "transparent",
@@ -460,13 +507,13 @@ export default function SlotPriorities() {
     },
     ruleMeta: {
       ...font.regular, fontSize: 12, color: colors.grey60, letterSpacing: 0.25,
-      paddingLeft: 75,
+      paddingLeft: isMobile ? 44 : 75,
     },
 
     /* Empty state */
     emptyState: {
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-      gap: 24, padding: "160px 0", flex: 1,
+      gap: 24, padding: isMobile ? "80px 16px" : "160px 0", flex: 1,
     },
     emptyIcon: {
       width: 56, height: 56, borderRadius: "50%", background: colors.purple10,
@@ -476,59 +523,89 @@ export default function SlotPriorities() {
     emptySub: { ...font.regular, fontSize: 12, color: colors.grey80, lineHeight: "21px" },
 
     /* Builder */
-    builder: { border: `1px solid ${colors.grey10}`, borderRadius: 8, padding: 24 },
+    builder: { border: `1px solid ${colors.grey10}`, borderRadius: 8, padding: isMobile ? 16 : 24 },
     builderTitle: { ...font.semibold, fontSize: 14, marginBottom: 20, color: colors.grey100 },
     condGroup: { padding: 0, background: "transparent", borderRadius: 8, marginBottom: 16 },
     condTitle: { ...font.regular, fontSize: 12, letterSpacing: 0.25, color: colors.grey40, marginBottom: 16 },
-    row: { display: "flex", alignItems: "center", gap: 8, marginBottom: 16 },
-    label: { ...font.regular, fontSize: 14, color: colors.grey100, width: 111, flexShrink: 0, letterSpacing: 0.25 },
-    selectWrapper: { position: "relative", display: "inline-flex", alignItems: "center" },
+    row: {
+      display: "flex",
+      alignItems: isMobile ? "stretch" : "center",
+      flexDirection: isMobile ? "column" : "row",
+      gap: 8,
+      marginBottom: 16,
+    },
+    label: {
+      ...font.regular, fontSize: 14, color: colors.grey100,
+      width: isMobile ? "auto" : 111, flexShrink: 0, letterSpacing: 0.25,
+      ...(isMobile ? { marginBottom: 2 } : {}),
+    },
+    selectWrapper: {
+      position: "relative", display: "inline-flex", alignItems: "center",
+      ...(isMobile ? { width: "100%" } : {}),
+    },
     select: {
       padding: "12px 40px 12px 16px", border: `1px solid ${colors.grey20}`, borderRadius: 4,
       fontSize: 12, background: colors.white, color: colors.grey100, ...font.regular,
       letterSpacing: 0.25, appearance: "none", WebkitAppearance: "none", MozAppearance: "none",
-      cursor: "pointer", width: 248,
+      cursor: "pointer", width: fieldWidth,
+      ...(isMobile ? { boxSizing: "border-box" } : {}),
     },
     selectIcon: { position: "absolute", right: 14, pointerEvents: "none", display: "flex", alignItems: "center" },
-    inputWrapper: { position: "relative", display: "inline-flex", alignItems: "center" },
+    inputWrapper: {
+      position: "relative", display: "inline-flex", alignItems: "center",
+      ...(isMobile ? { width: "100%" } : {}),
+    },
     input: {
       padding: "12px 40px 12px 16px", border: `1px solid ${colors.grey20}`, borderRadius: 4,
       fontSize: 12, background: colors.white, color: colors.grey100, ...font.regular,
-      letterSpacing: 0.25, width: 248,
+      letterSpacing: 0.25, width: fieldWidth,
       MozAppearance: "textfield",
+      ...(isMobile ? { boxSizing: "border-box" } : {}),
     },
     inputNoIcon: {
       padding: "12px 16px", border: `1px solid ${colors.grey20}`, borderRadius: 4,
       fontSize: 12, background: colors.white, color: colors.grey100, ...font.regular,
-      letterSpacing: 0.25, width: 248,
+      letterSpacing: 0.25, width: fieldWidth,
       MozAppearance: "textfield",
+      ...(isMobile ? { boxSizing: "border-box" } : {}),
     },
     inputIcon: { position: "absolute", right: 14, pointerEvents: "none", display: "flex", alignItems: "center" },
     nlPreview: {
-      background: colors.grey5, borderRadius: 8, padding: 16, fontSize: 14, lineHeight: 1.6,
+      background: colors.grey5, borderRadius: 8, padding: isMobile ? 12 : 16, fontSize: 14, lineHeight: 1.6,
       borderLeft: `4px solid ${colors.purple}`, marginBottom: 20, ...font.regular, letterSpacing: 0.25,
     },
     btnCancel: {
-      padding: "14px 24px", fontSize: 15, ...font.bold, border: "none",
+      padding: isMobile ? "12px 16px" : "14px 24px", fontSize: isMobile ? 14 : 15, ...font.bold, border: "none",
       borderRadius: 6, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6,
       background: colors.grey10, color: colors.grey100, letterSpacing: 0.25,
+      ...(isMobile ? { flex: 1, justifyContent: "center" } : {}),
     },
     btnConfirm: {
-      padding: "14px 24px", fontSize: 15, ...font.bold, border: "none",
+      padding: isMobile ? "12px 16px" : "14px 24px", fontSize: isMobile ? 14 : 15, ...font.bold, border: "none",
       borderRadius: 6, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6,
       background: colors.purple, color: colors.white, letterSpacing: 0.25,
+      ...(isMobile ? { flex: 1, justifyContent: "center" } : {}),
     },
 
     /* Right column — Live Preview sidebar */
     rightCol: {
-      width: 359, flexShrink: 0, borderLeft: `1px solid ${colors.grey20}`,
-      display: "flex", flexDirection: "column", overflowY: "auto",
+      ...(isMobile
+        ? { width: "100%", borderTop: `1px solid ${colors.grey20}`, display: "flex", flexDirection: "column" }
+        : { width: isTablet ? 300 : 359, flexShrink: 0, borderLeft: `1px solid ${colors.grey20}`, display: "flex", flexDirection: "column", overflowY: "auto" }
+      ),
+    },
+
+    /* Mobile preview toggle button */
+    previewToggle: {
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      padding: "16px", cursor: "pointer", background: colors.grey5,
+      borderBottom: `1px solid ${colors.grey20}`,
     },
 
     /* Preview header section */
     previewHeader: {
-      padding: 24, borderBottom: `1px solid ${colors.grey20}`,
-      display: "flex", flexDirection: "column", gap: 24,
+      padding: isMobile ? 16 : 24, borderBottom: `1px solid ${colors.grey20}`,
+      display: "flex", flexDirection: "column", gap: isMobile ? 16 : 24,
     },
     previewTitleRow: { display: "flex", alignItems: "center", gap: 2 },
     previewTitle: { ...font.bold, fontSize: 16, color: colors.grey100, letterSpacing: 0.25, flex: 1 },
@@ -541,22 +618,22 @@ export default function SlotPriorities() {
       gap: 8,
     },
     statCard: {
-      padding: "16px 8px", display: "flex", flexDirection: "column",
+      padding: isMobile ? "12px 6px" : "16px 8px", display: "flex", flexDirection: "column",
       gap: 4, alignItems: "center", justifyContent: "center",
       border: `1px solid ${colors.purple}`, borderRadius: 8, background: colors.white,
     },
-    statNumber: { ...font.bold, fontSize: 20, color: colors.purple, letterSpacing: 0.25 },
-    statLabel: { ...font.bold, fontSize: 12, color: colors.purple, letterSpacing: 0.25, textAlign: "center" },
+    statNumber: { ...font.bold, fontSize: isMobile ? 16 : 20, color: colors.purple, letterSpacing: 0.25 },
+    statLabel: { ...font.bold, fontSize: isMobile ? 10 : 12, color: colors.purple, letterSpacing: 0.25, textAlign: "center" },
     statUnsetCard: {
-      padding: "16px 8px", display: "flex", flexDirection: "column",
+      padding: isMobile ? "12px 6px" : "16px 8px", display: "flex", flexDirection: "column",
       gap: 4, alignItems: "center", justifyContent: "center",
       border: `1px solid ${colors.grey20}`, borderRadius: 8, background: colors.grey5,
     },
-    statUnsetNumber: { ...font.bold, fontSize: 20, color: colors.grey100, letterSpacing: 0.25 },
-    statUnsetLabel: { ...font.bold, fontSize: 12, color: colors.grey40, letterSpacing: 0.25, textAlign: "center" },
+    statUnsetNumber: { ...font.bold, fontSize: isMobile ? 16 : 20, color: colors.grey100, letterSpacing: 0.25 },
+    statUnsetLabel: { ...font.bold, fontSize: isMobile ? 10 : 12, color: colors.grey40, letterSpacing: 0.25, textAlign: "center" },
 
     /* Preview slots section */
-    previewSlots: { padding: 24, borderBottom: `1px solid ${colors.grey20}` },
+    previewSlots: { padding: isMobile ? 16 : 24, borderBottom: `1px solid ${colors.grey20}` },
     dayLabel: { ...font.bold, fontSize: 12, color: colors.grey100, letterSpacing: 0.25, marginBottom: 8 },
 
     /* Slot row — purple for matched, grey for unset */
@@ -570,7 +647,7 @@ export default function SlotPriorities() {
       padding: "8px 12px", background: colors.grey5, borderRadius: 6,
       borderLeft: `3px solid ${colors.grey30}`,
     },
-    slotTime: { ...font.regular, fontSize: 14, color: colors.grey100, letterSpacing: 0.25 },
+    slotTime: { ...font.regular, fontSize: isMobile ? 13 : 14, color: colors.grey100, letterSpacing: 0.25 },
     slotMetaPurple: { ...font.regular, fontSize: 12, color: colors.purple, letterSpacing: 0.25, textAlign: "center" },
     slotMetaGrey: { ...font.regular, fontSize: 12, color: colors.grey40, letterSpacing: 0.25, textAlign: "center" },
     priorityBadge: {
@@ -585,10 +662,13 @@ export default function SlotPriorities() {
 
     /* Toast */
     toast: {
-      position: "fixed", bottom: 24, right: 24, background: colors.grey100,
+      position: "fixed", bottom: 24,
+      ...(isMobile ? { left: 16, right: 16 } : { right: 24 }),
+      background: colors.grey100,
       color: colors.white, padding: "12px 20px", borderRadius: 8,
       ...font.bold, fontSize: 13, letterSpacing: 0.25,
       boxShadow: "0 12px 40px rgba(0,0,0,0.12)", zIndex: 100,
+      ...(isMobile ? { textAlign: "center" } : {}),
     },
   };
 
@@ -620,7 +700,7 @@ export default function SlotPriorities() {
         </div>
         <button style={s.goBackBtn}>
           <BackArrowIcon />
-          Go back
+          {!isMobile && "Go back"}
         </button>
       </header>
 
@@ -766,7 +846,7 @@ export default function SlotPriorities() {
                             </div>
                             <div style={s.row}>
                               <span style={s.label}>Between</span>
-                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: isMobile ? "wrap" : "nowrap", ...(isMobile ? { width: "100%" } : {}) }}>
                                 <div style={s.inputWrapper}>
                                   <input type="time" style={s.input} value={editDraft.timeFrom} onChange={(e) => updateDraftField("timeFrom", e.target.value)} />
                                   <span style={s.inputIcon}><ClockIcon /></span>
@@ -893,7 +973,7 @@ export default function SlotPriorities() {
                       </div>
                       <div style={s.row}>
                         <span style={s.label}>Between</span>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: isMobile ? "wrap" : "nowrap", ...(isMobile ? { width: "100%" } : {}) }}>
                           <div style={s.inputWrapper}>
                             <input type="time" style={s.input} value={condTimeFrom} onChange={(e) => setCondTimeFrom(e.target.value)} />
                             <span style={s.inputIcon}><ClockIcon /></span>
@@ -954,12 +1034,24 @@ export default function SlotPriorities() {
 
         {/* ── Right column: Live Preview ─────────── */}
         <div style={s.rightCol}>
-          {/* Header + Stats */}
+          {/* Mobile collapsible toggle */}
+          {isMobile && (
+            <div style={s.previewToggle} onClick={() => setShowPreview(!showPreview)}>
+              <span style={{ ...font.bold, fontSize: 14, color: colors.grey100 }}>Live Preview</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ ...font.regular, fontSize: 12, color: colors.grey80 }}>{totalSlots} slots</span>
+                {showPreview ? <ChevronUp /> : <ChevronDown />}
+              </span>
+            </div>
+          )}
+
+          {/* Header + Stats — always shown on desktop, toggle on mobile */}
+          {(!isMobile || showPreview) && <>
           <div style={s.previewHeader}>
-            <div style={s.previewTitleRow}>
+            {!isMobile && <div style={s.previewTitleRow}>
               <h2 style={s.previewTitle}>Live Preview</h2>
               <span style={s.slotCount}>{totalSlots} slots</span>
-            </div>
+            </div>}
             {/* Stats — separate card boxes, max 3 per row, excess fills space */}
             {(() => {
               const allCells = [];
@@ -1023,6 +1115,7 @@ export default function SlotPriorities() {
               })}
             </div>
           </div>
+          </>}
         </div>
       </div>
 
