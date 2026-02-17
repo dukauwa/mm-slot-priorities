@@ -901,23 +901,31 @@ export default function SlotPriorities() {
                   <div key={day.label}>
                     <div style={s.dayLabel}>{day.label}</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                      {groups.map((g, i) => (
-                        <div key={i} style={g.priority !== null ? s.slotRowPurple : s.slotRowUnset}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                            <span style={s.slotTime}>{g.startTime} - {g.endTime}</span>
-                            <span style={g.priority !== null ? s.slotMetaPurple : s.slotMetaGrey}>
-                              {g.count === 1 ? "1" : `${g.count} Slots`}
-                            </span>
-                          </div>
-                          {g.priority !== null ? (
-                            <div style={s.priorityBadge}>{g.priority}</div>
-                          ) : (
-                            <div style={s.unsetBadge}>
-                              <MinusIcon />
-                            </div>
-                          )}
+                      {groups.length === 0 && previewRule ? (
+                        <div style={{ ...s.slotRowUnset, justifyContent: "center", borderLeft: "none", background: colors.grey5 }}>
+                          <span style={{ ...font.regular, fontSize: 14, color: colors.grey40, letterSpacing: 0.25 }}>
+                            No matching slots
+                          </span>
                         </div>
-                      ))}
+                      ) : (
+                        groups.map((g, i) => (
+                          <div key={i} style={g.priority !== null ? s.slotRowPurple : s.slotRowUnset}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                              <span style={s.slotTime}>{g.startTime} - {g.endTime}</span>
+                              <span style={g.priority !== null ? s.slotMetaPurple : s.slotMetaGrey}>
+                                {g.count === 1 ? "1" : `${g.count} Slots`}
+                              </span>
+                            </div>
+                            {g.priority !== null ? (
+                              <div style={s.priorityBadge}>{g.priority}</div>
+                            ) : (
+                              <div style={s.unsetBadge}>
+                                <MinusIcon />
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
                 );
