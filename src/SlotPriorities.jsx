@@ -357,7 +357,7 @@ export default function SlotPriorities() {
       cursor: "pointer", transition: "border-color 0.15s, background 0.15s",
     },
     ruleItemExpanded: {
-      background: colors.purple5, border: `1px solid ${colors.purple}`, borderRadius: 4,
+      background: colors.white, border: `1px solid ${colors.purple}`, borderRadius: 4,
       padding: 16, display: "flex", flexDirection: "column", gap: 0,
       cursor: "pointer",
     },
@@ -573,7 +573,7 @@ export default function SlotPriorities() {
 
                   {/* Inline edit fields — shown when expanded */}
                   {isExpanded && (
-                    <div style={{ marginTop: 16, borderTop: `1px solid ${colors.purple}`, paddingTop: 16 }} onClick={(e) => e.stopPropagation()}>
+                    <div style={{ marginTop: 16, borderTop: `1px solid ${colors.grey10}`, paddingTop: 16 }} onClick={(e) => e.stopPropagation()}>
                       <div style={{ ...s.condGroup, marginBottom: 0 }}>
                         <div style={s.condTitle}>Edit rule</div>
                         <div style={s.row}>
