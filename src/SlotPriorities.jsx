@@ -144,6 +144,12 @@ const CalendarIcon = () => (
     <path d="M9.29167 0.625V3.29167M3.95833 0.625V3.29167M0.625 5.95833H12.625M1.95833 1.95833H11.2917C12.028 1.95833 12.625 2.55529 12.625 3.29167V12.625C12.625 13.3614 12.028 13.9583 11.2917 13.9583H1.95833C1.22195 13.9583 0.625 13.3614 0.625 12.625V3.29167C0.625 2.55529 1.22195 1.95833 1.95833 1.95833Z" stroke={colors.grey60} strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
+const ClockIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="7" cy="7" r="6.25" stroke={colors.grey60} strokeWidth="1.25" />
+    <path d="M7 3.5V7L9.5 8.5" stroke={colors.grey60} strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
 
 /* ── Main Component ──────────────────────────────────────── */
 export default function SlotPriorities() {
@@ -466,7 +472,7 @@ export default function SlotPriorities() {
     /* Builder */
     builder: { border: `1px solid ${colors.grey10}`, borderRadius: 8, padding: 24 },
     builderTitle: { ...font.semibold, fontSize: 14, marginBottom: 20, color: colors.grey100 },
-    condGroup: { padding: 16, background: "transparent", borderRadius: 8, marginBottom: 16 },
+    condGroup: { padding: 0, background: "transparent", borderRadius: 8, marginBottom: 16 },
     condTitle: { ...font.regular, fontSize: 12, letterSpacing: 0.25, color: colors.grey40, marginBottom: 16 },
     row: { display: "flex", alignItems: "center", gap: 8, marginBottom: 16 },
     label: { ...font.regular, fontSize: 14, color: colors.grey100, width: 111, flexShrink: 0, letterSpacing: 0.25 },
@@ -475,14 +481,21 @@ export default function SlotPriorities() {
       padding: "12px 40px 12px 16px", border: `1px solid ${colors.grey20}`, borderRadius: 4,
       fontSize: 12, background: colors.white, color: colors.grey100, ...font.regular,
       letterSpacing: 0.25, appearance: "none", WebkitAppearance: "none", MozAppearance: "none",
-      cursor: "pointer", minWidth: 160,
+      cursor: "pointer", width: 248,
     },
     selectIcon: { position: "absolute", right: 14, pointerEvents: "none", display: "flex", alignItems: "center" },
     inputWrapper: { position: "relative", display: "inline-flex", alignItems: "center" },
     input: {
       padding: "12px 40px 12px 16px", border: `1px solid ${colors.grey20}`, borderRadius: 4,
       fontSize: 12, background: colors.white, color: colors.grey100, ...font.regular,
-      letterSpacing: 0.25, minWidth: 160,
+      letterSpacing: 0.25, width: 248,
+      MozAppearance: "textfield",
+    },
+    inputNoIcon: {
+      padding: "12px 16px", border: `1px solid ${colors.grey20}`, borderRadius: 4,
+      fontSize: 12, background: colors.white, color: colors.grey100, ...font.regular,
+      letterSpacing: 0.25, width: 248,
+      MozAppearance: "textfield",
     },
     inputIcon: { position: "absolute", right: 14, pointerEvents: "none", display: "flex", alignItems: "center" },
     nlPreview: {
@@ -575,6 +588,24 @@ export default function SlotPriorities() {
 
   return (
     <div style={s.page}>
+      {/* Hide native browser date/time picker and number spinner icons */}
+      <style>{`
+        input[type="time"]::-webkit-calendar-picker-indicator {
+          opacity: 0;
+          position: absolute;
+          right: 0;
+          top: 0;
+          width: 100%;
+          height: 100%;
+          cursor: pointer;
+        }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+          -webkit-appearance: none;
+          display: none;
+          margin: 0;
+        }
+      `}</style>
       {/* ── Header ──────────────────────────────────── */}
       <header style={s.header}>
         <div style={s.headerLeft}>
@@ -707,7 +738,7 @@ export default function SlotPriorities() {
                               <span style={s.label}>Start time</span>
                               <div style={s.inputWrapper}>
                                 <input type="time" style={s.input} value={editDraft.time} onChange={(e) => updateDraftField("time", e.target.value)} />
-                                <span style={s.inputIcon}><CalendarIcon /></span>
+                                <span style={s.inputIcon}><ClockIcon /></span>
                               </div>
                             </div>
                           </>
@@ -730,12 +761,12 @@ export default function SlotPriorities() {
                               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                 <div style={s.inputWrapper}>
                                   <input type="time" style={s.input} value={editDraft.timeFrom} onChange={(e) => updateDraftField("timeFrom", e.target.value)} />
-                                  <span style={s.inputIcon}><CalendarIcon /></span>
+                                  <span style={s.inputIcon}><ClockIcon /></span>
                                 </div>
                                 <span style={{ fontSize: 12, color: colors.grey80, ...font.regular }}>and</span>
                                 <div style={s.inputWrapper}>
                                   <input type="time" style={s.input} value={editDraft.timeTo} onChange={(e) => updateDraftField("timeTo", e.target.value)} />
-                                  <span style={s.inputIcon}><CalendarIcon /></span>
+                                  <span style={s.inputIcon}><ClockIcon /></span>
                                 </div>
                               </div>
                             </div>
@@ -769,9 +800,8 @@ export default function SlotPriorities() {
                         <div style={{ ...s.row, marginBottom: 0 }}>
                           <span style={s.label}>Priority</span>
                           <div style={s.inputWrapper}>
-                            <input type="number" style={s.input} value={editDraft.priority} min={1} max={100}
+                            <input type="number" style={s.inputNoIcon} value={editDraft.priority} min={1} max={100}
                               onChange={(e) => updateDraftField("priority", e.target.value)} />
-                            <span style={s.inputIcon}><CalendarIcon /></span>
                           </div>
                           <span style={{ fontSize: 12, color: colors.grey40, ...font.regular, letterSpacing: 0.25, whiteSpace: "nowrap" }}>1 = highest, 100 = lowest</span>
                         </div>
@@ -833,7 +863,7 @@ export default function SlotPriorities() {
                         <span style={s.label}>Start time</span>
                         <div style={s.inputWrapper}>
                           <input type="time" style={s.input} value={condDayTimeTime} onChange={(e) => setCondDayTimeTime(e.target.value)} />
-                          <span style={s.inputIcon}><CalendarIcon /></span>
+                          <span style={s.inputIcon}><ClockIcon /></span>
                         </div>
                       </div>
                     </>
@@ -856,12 +886,12 @@ export default function SlotPriorities() {
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <div style={s.inputWrapper}>
                             <input type="time" style={s.input} value={condTimeFrom} onChange={(e) => setCondTimeFrom(e.target.value)} />
-                            <span style={s.inputIcon}><CalendarIcon /></span>
+                            <span style={s.inputIcon}><ClockIcon /></span>
                           </div>
                           <span style={{ fontSize: 12, color: colors.grey80, ...font.regular }}>and</span>
                           <div style={s.inputWrapper}>
                             <input type="time" style={s.input} value={condTimeTo} onChange={(e) => setCondTimeTo(e.target.value)} />
-                            <span style={s.inputIcon}><CalendarIcon /></span>
+                            <span style={s.inputIcon}><ClockIcon /></span>
                           </div>
                         </div>
                       </div>
@@ -895,8 +925,7 @@ export default function SlotPriorities() {
                   <div style={{ ...s.row, marginBottom: 0 }}>
                     <span style={s.label}>Priority</span>
                     <div style={s.inputWrapper}>
-                      <input type="number" style={s.input} value={condPriority} min={1} max={100} onChange={(e) => setCondPriority(e.target.value)} />
-                      <span style={s.inputIcon}><CalendarIcon /></span>
+                      <input type="number" style={s.inputNoIcon} value={condPriority} min={1} max={100} onChange={(e) => setCondPriority(e.target.value)} />
                     </div>
                     <span style={{ fontSize: 12, color: colors.grey40, ...font.regular, letterSpacing: 0.25, whiteSpace: "nowrap" }}>1 = highest, 100 = lowest</span>
                   </div>
