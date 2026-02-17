@@ -69,9 +69,14 @@ const SLOTS = generateSlots();
 function slotMatchesRule(slot, rule) {
   switch (rule.type) {
     case "day": return slot.day === rule.day;
-    case "time_exact": return slot.startTime === rule.time;
-    case "time_range": return slot.startTime >= rule.timeFrom && slot.startTime <= rule.timeTo;
-    case "location": return slot.location === rule.location;
+    case "time_range": {
+      const dayMatch = !rule.day || rule.day === "All days" ? true : slot.day === rule.day;
+      return dayMatch && slot.startTime >= rule.timeFrom && slot.startTime <= rule.timeTo;
+    }
+    case "location": {
+      const dayMatch = !rule.day || rule.day === "All days" ? true : slot.day === rule.day;
+      return dayMatch && slot.location === rule.location;
+    }
     case "day_time": return slot.day === rule.day && slot.startTime === rule.time;
     default: return false;
   }
@@ -81,11 +86,11 @@ function getRuleDescription(rule) {
   const V = ({ children }) => (
     <span style={{ ...font.bold, color: colors.purple }}>{children}</span>
   );
+  const dayLabel = (!rule.day || rule.day === "All days") ? "all days" : rule.day;
   switch (rule.type) {
     case "day": return <span>All slots on <V>{rule.day}</V> → Priority <V>{rule.priority}</V></span>;
-    case "time_exact": return <span>Slots starting at <V>{rule.time}</V> on any day → Priority <V>{rule.priority}</V></span>;
-    case "time_range": return <span>Slots starting between <V>{rule.timeFrom}</V> and <V>{rule.timeTo}</V> on any day → Priority <V>{rule.priority}</V></span>;
-    case "location": return <span>Slots at <V>{rule.location}</V> on any day → Priority <V>{rule.priority}</V></span>;
+    case "time_range": return <span>Slots between <V>{rule.timeFrom}</V> and <V>{rule.timeTo}</V> on <V>{dayLabel}</V> → Priority <V>{rule.priority}</V></span>;
+    case "location": return <span>Slots at <V>{rule.location}</V> on <V>{dayLabel}</V> → Priority <V>{rule.priority}</V></span>;
     case "day_time": return <span>All slots on <V>{rule.day}</V> at <V>{rule.time}</V> → Priority <V>{rule.priority}</V></span>;
     default: return null;
   }
@@ -152,15 +157,40 @@ export default function SlotPriorities() {
   // Builder state
   const [condType, setCondType] = useState("day");
   const [condDay, setCondDay] = useState(DAYS[0].label);
-  const [condTimeExact, setCondTimeExact] = useState("09:00");
-  const [condTimeFrom, setCondTimeFrom] = useState("10:00");
+  const [condTimeFrom, setCondTimeFrom] = useState("09:00");
   const [condTimeTo, setCondTimeTo] = useState("11:00");
+  const [condTimeRangeDay, setCondTimeRangeDay] = useState("All days");
   const [condLocation, setCondLocation] = useState("Booth A1");
+  const [condLocationDay, setCondLocationDay] = useState("All days");
   const [condDayTime, setCondDayTime] = useState(DAYS[0].label);
   const [condDayTimeTime, setCondDayTimeTime] = useState("09:00");
   const [condPriority, setCondPriority] = useState("1");
 
   const expandedCardRef = useRef(null);
+  const [dragIdx, setDragIdx] = useState(null);
+  const [dragOverIdx, setDragOverIdx] = useState(null);
+
+  const handleDragStart = (idx) => (e) => {
+    setDragIdx(idx);
+    e.dataTransfer.effectAllowed = "move";
+  };
+  const handleDragOver = (idx) => (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverIdx(idx);
+  };
+  const handleDrop = (idx) => (e) => {
+    e.preventDefault();
+    if (dragIdx !== null && dragIdx !== idx) {
+      const next = [...rules];
+      const [moved] = next.splice(dragIdx, 1);
+      next.splice(idx, 0, moved);
+      setRules(next);
+    }
+    setDragIdx(null);
+    setDragOverIdx(null);
+  };
+  const handleDragEnd = () => { setDragIdx(null); setDragOverIdx(null); };
 
   // Click outside expanded card → close edit mode
   useEffect(() => {
@@ -185,9 +215,8 @@ export default function SlotPriorities() {
     const rule = { id: idCounter, type: condType, priority };
     switch (condType) {
       case "day": rule.day = condDay; break;
-      case "time_exact": rule.time = condTimeExact; break;
-      case "time_range": rule.timeFrom = condTimeFrom; rule.timeTo = condTimeTo; break;
-      case "location": rule.location = condLocation; break;
+      case "time_range": rule.timeFrom = condTimeFrom; rule.timeTo = condTimeTo; rule.day = condTimeRangeDay; break;
+      case "location": rule.location = condLocation; rule.day = condLocationDay; break;
       case "day_time": rule.day = condDayTime; rule.time = condDayTimeTime; break;
     }
     setRules([...rules, rule]);
@@ -272,15 +301,16 @@ export default function SlotPriorities() {
   const nlPreview = useMemo(() => {
     const p = condPriority;
     const h = (v) => <strong style={{ color: colors.purple }}>{v}</strong>;
+    const trDay = condTimeRangeDay === "All days" ? "all days" : condTimeRangeDay;
+    const locDay = condLocationDay === "All days" ? "all days" : condLocationDay;
     switch (condType) {
       case "day": return <span>All slots on {h(condDay)} → priority {h(p)}</span>;
-      case "time_exact": return <span>Slots starting at {h(condTimeExact)} on any day → priority {h(p)}</span>;
-      case "time_range": return <span>Slots starting between {h(condTimeFrom)} and {h(condTimeTo)} on any day → priority {h(p)}</span>;
-      case "location": return <span>Slots at {h(condLocation)} → priority {h(p)}</span>;
+      case "time_range": return <span>Slots between {h(condTimeFrom)} and {h(condTimeTo)} on {h(trDay)} → priority {h(p)}</span>;
+      case "location": return <span>Slots at {h(condLocation)} on {h(locDay)} → priority {h(p)}</span>;
       case "day_time": return <span>Slots on {h(condDayTime)} at {h(condDayTimeTime)} → priority {h(p)}</span>;
       default: return null;
     }
-  }, [condType, condDay, condTimeExact, condTimeFrom, condTimeTo, condLocation, condDayTime, condDayTimeTime, condPriority]);
+  }, [condType, condDay, condTimeFrom, condTimeTo, condTimeRangeDay, condLocation, condLocationDay, condDayTime, condDayTimeTime, condPriority]);
 
   /* ── Build preview data ──────────────────────────────── */
   /* Group consecutive slots by priority within each day. Slots with
@@ -393,7 +423,7 @@ export default function SlotPriorities() {
 
     /* Rule item — new flat style */
     ruleItem: {
-      background: colors.white, border: `1px solid ${colors.grey10}`, borderRadius: 4,
+      background: colors.white, border: `1px solid ${colors.grey20}`, borderRadius: 4,
       padding: 16, display: "flex", flexDirection: "column", gap: 0,
       cursor: "pointer", transition: "border-color 0.15s, background 0.15s",
     },
@@ -594,15 +624,26 @@ export default function SlotPriorities() {
             {rules.map((rule, idx) => {
               const matchCount = SLOTS.filter((sl) => slotMatchesRule(sl, rule)).length;
               const isExpanded = expandedRuleId === rule.id;
+              const isDragging = dragIdx === idx;
+              const isDragOver = dragOverIdx === idx && dragIdx !== idx;
               return (
                 <div
                   key={rule.id}
                   ref={isExpanded ? expandedCardRef : undefined}
-                  style={isExpanded ? s.ruleItemExpanded : s.ruleItem}
+                  draggable={!isExpanded}
+                  onDragStart={handleDragStart(idx)}
+                  onDragOver={handleDragOver(idx)}
+                  onDrop={handleDrop(idx)}
+                  onDragEnd={handleDragEnd}
+                  style={{
+                    ...(isExpanded ? s.ruleItemExpanded : s.ruleItem),
+                    ...(isDragging ? { opacity: 0.4 } : {}),
+                    ...(isDragOver ? { borderTopColor: colors.purple, borderTopWidth: 2 } : {}),
+                  }}
                   onClick={() => !isExpanded && toggleExpandRule(rule.id)}
                 >
                   <div style={s.ruleRow}>
-                    <div style={{ cursor: "grab", display: "flex", alignItems: "center" }}><GripIcon /></div>
+                    <div style={{ cursor: "grab", display: "flex", alignItems: "center" }} onMouseDown={(e) => e.stopPropagation()}><GripIcon /></div>
                     <div style={s.rulePriorityBadge}>{rule.priority}</div>
                     <div style={s.ruleDescription}>{getRuleDescription(rule)}</div>
                     <div style={s.ruleActions}>
@@ -625,17 +666,15 @@ export default function SlotPriorities() {
                               const newType = e.target.value;
                               const updated = { ...editDraft, type: newType };
                               if (newType === "day" && !updated.day) updated.day = DAYS[0].label;
-                              if (newType === "time_exact" && !updated.time) updated.time = "09:00";
-                              if (newType === "time_range") { if (!updated.timeFrom) updated.timeFrom = "10:00"; if (!updated.timeTo) updated.timeTo = "11:00"; }
-                              if (newType === "location" && !updated.location) updated.location = LOCATIONS[0];
+                              if (newType === "time_range") { if (!updated.timeFrom) updated.timeFrom = "09:00"; if (!updated.timeTo) updated.timeTo = "11:00"; if (!updated.day) updated.day = "All days"; }
+                              if (newType === "location") { if (!updated.location) updated.location = LOCATIONS[0]; if (!updated.day) updated.day = "All days"; }
                               if (newType === "day_time") { if (!updated.day) updated.day = DAYS[0].label; if (!updated.time) updated.time = "09:00"; }
                               setEditDraft(updated);
                             }}>
                               <option value="day">Day is…</option>
-                              <option value="time_exact">Start time is exactly…</option>
+                              <option value="day_time">Day + Start time are…</option>
                               <option value="time_range">Start time is between…</option>
-                              <option value="location">Location is…</option>
-                              <option value="day_time">Day + start time are…</option>
+                              <option value="location">Location on day…</option>
                             </select>
                             <span style={s.selectIcon}><CaretDownIcon /></span>
                           </div>
@@ -649,43 +688,6 @@ export default function SlotPriorities() {
                                 {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
                               </select>
                               <span style={s.selectIcon}><CalendarIcon /></span>
-                            </div>
-                          </div>
-                        )}
-
-                        {editDraft.type === "time_exact" && (
-                          <div style={s.row}>
-                            <span style={s.label}>Start time</span>
-                            <div style={s.inputWrapper}>
-                              <input type="time" style={{ ...s.input, width: 160 }} value={editDraft.time} onChange={(e) => updateDraftField("time", e.target.value)} />
-                              <span style={s.inputIcon}><CalendarIcon /></span>
-                            </div>
-                          </div>
-                        )}
-
-                        {editDraft.type === "time_range" && (
-                          <div style={s.row}>
-                            <span style={s.label}>Between</span>
-                            <div style={s.inputWrapper}>
-                              <input type="time" style={{ ...s.input, width: 140 }} value={editDraft.timeFrom} onChange={(e) => updateDraftField("timeFrom", e.target.value)} />
-                              <span style={s.inputIcon}><CalendarIcon /></span>
-                            </div>
-                            <span style={{ fontSize: 12, color: colors.grey80, ...font.regular }}>and</span>
-                            <div style={s.inputWrapper}>
-                              <input type="time" style={{ ...s.input, width: 140 }} value={editDraft.timeTo} onChange={(e) => updateDraftField("timeTo", e.target.value)} />
-                              <span style={s.inputIcon}><CalendarIcon /></span>
-                            </div>
-                          </div>
-                        )}
-
-                        {editDraft.type === "location" && (
-                          <div style={s.row}>
-                            <span style={s.label}>Location</span>
-                            <div style={s.selectWrapper}>
-                              <select style={s.select} value={editDraft.location} onChange={(e) => updateDraftField("location", e.target.value)}>
-                                {LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}
-                              </select>
-                              <span style={s.selectIcon}><CaretDownIcon /></span>
                             </div>
                           </div>
                         )}
@@ -704,8 +706,61 @@ export default function SlotPriorities() {
                             <div style={s.row}>
                               <span style={s.label}>Start time</span>
                               <div style={s.inputWrapper}>
-                                <input type="time" style={{ ...s.input, width: 160 }} value={editDraft.time} onChange={(e) => updateDraftField("time", e.target.value)} />
+                                <input type="time" style={s.input} value={editDraft.time} onChange={(e) => updateDraftField("time", e.target.value)} />
                                 <span style={s.inputIcon}><CalendarIcon /></span>
+                              </div>
+                            </div>
+                          </>
+                        )}
+
+                        {editDraft.type === "time_range" && (
+                          <>
+                            <div style={s.row}>
+                              <span style={s.label}>Day</span>
+                              <div style={s.selectWrapper}>
+                                <select style={s.select} value={editDraft.day || "All days"} onChange={(e) => updateDraftField("day", e.target.value)}>
+                                  <option value="All days">All days</option>
+                                  {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
+                                </select>
+                                <span style={s.selectIcon}><CalendarIcon /></span>
+                              </div>
+                            </div>
+                            <div style={s.row}>
+                              <span style={s.label}>Between</span>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <div style={s.inputWrapper}>
+                                  <input type="time" style={s.input} value={editDraft.timeFrom} onChange={(e) => updateDraftField("timeFrom", e.target.value)} />
+                                  <span style={s.inputIcon}><CalendarIcon /></span>
+                                </div>
+                                <span style={{ fontSize: 12, color: colors.grey80, ...font.regular }}>and</span>
+                                <div style={s.inputWrapper}>
+                                  <input type="time" style={s.input} value={editDraft.timeTo} onChange={(e) => updateDraftField("timeTo", e.target.value)} />
+                                  <span style={s.inputIcon}><CalendarIcon /></span>
+                                </div>
+                              </div>
+                            </div>
+                          </>
+                        )}
+
+                        {editDraft.type === "location" && (
+                          <>
+                            <div style={s.row}>
+                              <span style={s.label}>Location</span>
+                              <div style={s.selectWrapper}>
+                                <select style={s.select} value={editDraft.location} onChange={(e) => updateDraftField("location", e.target.value)}>
+                                  {LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}
+                                </select>
+                                <span style={s.selectIcon}><CaretDownIcon /></span>
+                              </div>
+                            </div>
+                            <div style={s.row}>
+                              <span style={s.label}>Day</span>
+                              <div style={s.selectWrapper}>
+                                <select style={s.select} value={editDraft.day || "All days"} onChange={(e) => updateDraftField("day", e.target.value)}>
+                                  <option value="All days">All days</option>
+                                  {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
+                                </select>
+                                <span style={s.selectIcon}><CalendarIcon /></span>
                               </div>
                             </div>
                           </>
@@ -714,7 +769,7 @@ export default function SlotPriorities() {
                         <div style={{ ...s.row, marginBottom: 0 }}>
                           <span style={s.label}>Priority</span>
                           <div style={s.inputWrapper}>
-                            <input type="number" style={{ ...s.input, width: 160 }} value={editDraft.priority} min={1} max={100}
+                            <input type="number" style={s.input} value={editDraft.priority} min={1} max={100}
                               onChange={(e) => updateDraftField("priority", e.target.value)} />
                             <span style={s.inputIcon}><CalendarIcon /></span>
                           </div>
@@ -738,16 +793,14 @@ export default function SlotPriorities() {
                 <div style={s.builderTitle}>New Rule</div>
 
                 <div style={s.condGroup}>
-                  <div style={s.condTitle}>Match slots where</div>
                   <div style={s.row}>
                     <span style={s.label}>Condition</span>
                     <div style={s.selectWrapper}>
                       <select style={s.select} value={condType} onChange={(e) => setCondType(e.target.value)}>
                         <option value="day">Day is…</option>
-                        <option value="time_exact">Start time is exactly…</option>
+                        <option value="day_time">Day + Start time are…</option>
                         <option value="time_range">Start time is between…</option>
-                        <option value="location">Location is…</option>
-                        <option value="day_time">Day + start time are…</option>
+                        <option value="location">Location on day…</option>
                       </select>
                       <span style={s.selectIcon}><CaretDownIcon /></span>
                     </div>
@@ -761,43 +814,6 @@ export default function SlotPriorities() {
                           {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
                         </select>
                         <span style={s.selectIcon}><CalendarIcon /></span>
-                      </div>
-                    </div>
-                  )}
-
-                  {condType === "time_exact" && (
-                    <div style={s.row}>
-                      <span style={s.label}>Start time</span>
-                      <div style={s.inputWrapper}>
-                        <input type="time" style={{ ...s.input, width: 160 }} value={condTimeExact} onChange={(e) => setCondTimeExact(e.target.value)} />
-                        <span style={s.inputIcon}><CalendarIcon /></span>
-                      </div>
-                    </div>
-                  )}
-
-                  {condType === "time_range" && (
-                    <div style={s.row}>
-                      <span style={s.label}>Between</span>
-                      <div style={s.inputWrapper}>
-                        <input type="time" style={{ ...s.input, width: 140 }} value={condTimeFrom} onChange={(e) => setCondTimeFrom(e.target.value)} />
-                        <span style={s.inputIcon}><CalendarIcon /></span>
-                      </div>
-                      <span style={{ fontSize: 12, color: colors.grey80, ...font.regular }}>and</span>
-                      <div style={s.inputWrapper}>
-                        <input type="time" style={{ ...s.input, width: 140 }} value={condTimeTo} onChange={(e) => setCondTimeTo(e.target.value)} />
-                        <span style={s.inputIcon}><CalendarIcon /></span>
-                      </div>
-                    </div>
-                  )}
-
-                  {condType === "location" && (
-                    <div style={s.row}>
-                      <span style={s.label}>Location</span>
-                      <div style={s.selectWrapper}>
-                        <select style={s.select} value={condLocation} onChange={(e) => setCondLocation(e.target.value)}>
-                          {LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}
-                        </select>
-                        <span style={s.selectIcon}><CaretDownIcon /></span>
                       </div>
                     </div>
                   )}
@@ -816,20 +832,70 @@ export default function SlotPriorities() {
                       <div style={s.row}>
                         <span style={s.label}>Start time</span>
                         <div style={s.inputWrapper}>
-                          <input type="time" style={{ ...s.input, width: 160 }} value={condDayTimeTime} onChange={(e) => setCondDayTimeTime(e.target.value)} />
+                          <input type="time" style={s.input} value={condDayTimeTime} onChange={(e) => setCondDayTimeTime(e.target.value)} />
                           <span style={s.inputIcon}><CalendarIcon /></span>
                         </div>
                       </div>
                     </>
                   )}
-                </div>
 
-                <div style={s.condGroup}>
-                  <div style={s.condTitle}>Set priority to</div>
+                  {condType === "time_range" && (
+                    <>
+                      <div style={s.row}>
+                        <span style={s.label}>Day</span>
+                        <div style={s.selectWrapper}>
+                          <select style={s.select} value={condTimeRangeDay} onChange={(e) => setCondTimeRangeDay(e.target.value)}>
+                            <option value="All days">All days</option>
+                            {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
+                          </select>
+                          <span style={s.selectIcon}><CalendarIcon /></span>
+                        </div>
+                      </div>
+                      <div style={s.row}>
+                        <span style={s.label}>Between</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <div style={s.inputWrapper}>
+                            <input type="time" style={s.input} value={condTimeFrom} onChange={(e) => setCondTimeFrom(e.target.value)} />
+                            <span style={s.inputIcon}><CalendarIcon /></span>
+                          </div>
+                          <span style={{ fontSize: 12, color: colors.grey80, ...font.regular }}>and</span>
+                          <div style={s.inputWrapper}>
+                            <input type="time" style={s.input} value={condTimeTo} onChange={(e) => setCondTimeTo(e.target.value)} />
+                            <span style={s.inputIcon}><CalendarIcon /></span>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {condType === "location" && (
+                    <>
+                      <div style={s.row}>
+                        <span style={s.label}>Location</span>
+                        <div style={s.selectWrapper}>
+                          <select style={s.select} value={condLocation} onChange={(e) => setCondLocation(e.target.value)}>
+                            {LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}
+                          </select>
+                          <span style={s.selectIcon}><CaretDownIcon /></span>
+                        </div>
+                      </div>
+                      <div style={s.row}>
+                        <span style={s.label}>Day</span>
+                        <div style={s.selectWrapper}>
+                          <select style={s.select} value={condLocationDay} onChange={(e) => setCondLocationDay(e.target.value)}>
+                            <option value="All days">All days</option>
+                            {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
+                          </select>
+                          <span style={s.selectIcon}><CalendarIcon /></span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
                   <div style={{ ...s.row, marginBottom: 0 }}>
                     <span style={s.label}>Priority</span>
                     <div style={s.inputWrapper}>
-                      <input type="number" style={{ ...s.input, width: 160 }} value={condPriority} min={1} max={100} onChange={(e) => setCondPriority(e.target.value)} />
+                      <input type="number" style={s.input} value={condPriority} min={1} max={100} onChange={(e) => setCondPriority(e.target.value)} />
                       <span style={s.inputIcon}><CalendarIcon /></span>
                     </div>
                     <span style={{ fontSize: 12, color: colors.grey40, ...font.regular, letterSpacing: 0.25, whiteSpace: "nowrap" }}>1 = highest, 100 = lowest</span>
