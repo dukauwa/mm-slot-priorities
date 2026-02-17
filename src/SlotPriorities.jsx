@@ -13,6 +13,7 @@ const colors = {
   grey100: "#282D30",
   purple: "#522DA6",
   purple10: "#EDE8FA",
+  grey10: "#E9EAEA",
 };
 
 const font = {
@@ -65,12 +66,13 @@ const SLOTS = generateSlots();
 
 /* ── Helpers ─────────────────────────────────────────────── */
 function getPriorityColor(p) {
+  // 1 = highest priority, 100 = lowest priority
   const n = parseInt(p);
-  if (n >= 80) return { bg: colors.purple10, fg: colors.purple, badge: colors.purple, border: colors.purple };
-  if (n >= 50) return { bg: "#eee8f6", fg: "#6b45b8", badge: "#6b45b8", border: "#6b45b8" };
-  if (n >= 30) return { bg: "#fdf3ec", fg: "#c47a2d", badge: "#c47a2d", border: "#c47a2d" };
-  if (n >= 10) return { bg: "#fdf8ec", fg: "#8b6914", badge: "#8b6914", border: "#8b6914" };
-  if (n >= 2) return { bg: "#eef2f6", fg: "#4a6a8a", badge: "#4a6a8a", border: "#4a6a8a" };
+  if (n <= 5) return { bg: colors.purple10, fg: colors.purple, badge: colors.purple, border: colors.purple };
+  if (n <= 20) return { bg: "#eee8f6", fg: "#6b45b8", badge: "#6b45b8", border: "#6b45b8" };
+  if (n <= 50) return { bg: "#fdf3ec", fg: "#c47a2d", badge: "#c47a2d", border: "#c47a2d" };
+  if (n <= 75) return { bg: "#fdf8ec", fg: "#8b6914", badge: "#8b6914", border: "#8b6914" };
+  if (n <= 99) return { bg: "#eef2f6", fg: "#4a6a8a", badge: "#4a6a8a", border: "#4a6a8a" };
   return { bg: colors.grey5, fg: colors.grey40, badge: colors.grey30, border: colors.grey60 };
 }
 
@@ -129,6 +131,18 @@ const ChevronDown = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="
 const XIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>;
 const GripIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" /><circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" /><circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" /></svg>;
 
+const CaretDownIcon = () => (
+  <svg width="12" height="7" viewBox="0 0 12 7" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M11.2826 1.28318L6.28255 6.28318C6.21287 6.3531 6.13008 6.40857 6.03892 6.44643C5.94775 6.48428 5.85001 6.50377 5.7513 6.50377C5.65259 6.50377 5.55485 6.48428 5.46369 6.44643C5.37252 6.40857 5.28973 6.3531 5.22005 6.28318L0.220051 1.28318C0.0791548 1.14228 0 0.951183 0 0.751926C0 0.552669 0.0791548 0.361572 0.220051 0.220676C0.360947 0.0797797 0.552044 0.000625136 0.751301 0.000625134C0.950558 0.000625131 1.14165 0.0797797 1.28255 0.220676L5.75193 4.69005L10.2213 0.220051C10.3622 0.079155 10.5533 0 10.7526 0C10.9518 0 11.1429 0.079155 11.2838 0.220051C11.4247 0.360948 11.5039 0.552044 11.5039 0.751301C11.5039 0.950559 11.4247 1.14166 11.2838 1.28255L11.2826 1.28318Z" fill={colors.grey60} />
+  </svg>
+);
+
+const CalendarIcon = () => (
+  <svg width="14" height="15" viewBox="0 0 14 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M9.29167 0.625V3.29167M3.95833 0.625V3.29167M0.625 5.95833H12.625M1.95833 1.95833H11.2917C12.028 1.95833 12.625 2.55529 12.625 3.29167V12.625C12.625 13.3614 12.028 13.9583 11.2917 13.9583H1.95833C1.22195 13.9583 0.625 13.3614 0.625 12.625V3.29167C0.625 2.55529 1.22195 1.95833 1.95833 1.95833Z" stroke={colors.grey60} strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
 /* ── Main Component ──────────────────────────────────────── */
 export default function SlotPriorities() {
   const [rules, setRules] = useState([]);
@@ -145,7 +159,7 @@ export default function SlotPriorities() {
   const [condLocation, setCondLocation] = useState("Booth A1");
   const [condDayTime, setCondDayTime] = useState(DAYS[0].label);
   const [condDayTimeTime, setCondDayTimeTime] = useState("09:00");
-  const [condPriority, setCondPriority] = useState("50");
+  const [condPriority, setCondPriority] = useState("1");
 
   const showToastMsg = useCallback((msg) => {
     setToast(msg);
@@ -423,24 +437,41 @@ export default function SlotPriorities() {
     },
 
     /* Builder */
-    builder: { border: `2px dashed ${colors.grey20}`, borderRadius: 8, padding: 18, marginTop: 6 },
-    condGroup: { padding: 14, background: colors.grey5, borderRadius: 8, marginBottom: 14 },
-    condTitle: { ...font.bold, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, color: colors.grey40, marginBottom: 10 },
-    row: { display: "flex", alignItems: "center", gap: 8, marginBottom: 10 },
-    label: { ...font.regular, fontSize: 13, color: colors.grey80, minWidth: 76, letterSpacing: 0.25 },
-    select: { padding: "7px 10px", border: `1px solid ${colors.grey20}`, borderRadius: 4, fontSize: 13, background: colors.white, color: colors.grey100, ...font.regular, letterSpacing: 0.25 },
-    input: { padding: "7px 10px", border: `1px solid ${colors.grey20}`, borderRadius: 4, fontSize: 13, background: colors.white, color: colors.grey100, ...font.regular, letterSpacing: 0.25 },
-    nlPreview: { background: colors.grey5, borderRadius: 8, padding: "10px 14px", fontSize: 13, lineHeight: 1.6, borderLeft: `3px solid ${colors.purple}`, marginBottom: 14, ...font.regular, letterSpacing: 0.25 },
-
-    /* Outlined button */
-    btnOutline: {
-      padding: "7px 14px", fontSize: 13, ...font.bold, border: `1px solid ${colors.grey20}`,
-      borderRadius: 4, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6,
-      background: colors.white, color: colors.grey100, letterSpacing: 0.25,
+    builder: { border: `2px dashed ${colors.grey10}`, borderRadius: 8, padding: 24, marginTop: 6 },
+    builderTitle: { ...font.semibold, fontSize: 14, marginBottom: 20, color: colors.grey100 },
+    condGroup: { padding: 16, background: colors.grey5, borderRadius: 8, marginBottom: 16 },
+    condTitle: { ...font.regular, fontSize: 12, letterSpacing: 0.25, color: colors.grey40, marginBottom: 16 },
+    row: { display: "flex", alignItems: "center", gap: 8, marginBottom: 16 },
+    label: { ...font.regular, fontSize: 14, color: colors.grey100, width: 111, flexShrink: 0, letterSpacing: 0.25 },
+    selectWrapper: { position: "relative", display: "inline-flex", alignItems: "center" },
+    select: {
+      padding: "12px 40px 12px 16px", border: `1px solid ${colors.grey20}`, borderRadius: 4,
+      fontSize: 12, background: colors.white, color: colors.grey100, ...font.regular,
+      letterSpacing: 0.25, appearance: "none", WebkitAppearance: "none", MozAppearance: "none",
+      cursor: "pointer", minWidth: 160,
     },
-    btnPrimary: {
-      padding: "7px 14px", fontSize: 13, ...font.bold, border: "none",
-      borderRadius: 4, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6,
+    selectIcon: { position: "absolute", right: 14, pointerEvents: "none", display: "flex", alignItems: "center" },
+    inputWrapper: { position: "relative", display: "inline-flex", alignItems: "center" },
+    input: {
+      padding: "12px 40px 12px 16px", border: `1px solid ${colors.grey20}`, borderRadius: 4,
+      fontSize: 12, background: colors.white, color: colors.grey100, ...font.regular,
+      letterSpacing: 0.25, minWidth: 160,
+    },
+    inputIcon: { position: "absolute", right: 14, pointerEvents: "none", display: "flex", alignItems: "center" },
+    nlPreview: {
+      background: colors.grey5, borderRadius: 8, padding: 16, fontSize: 14, lineHeight: 1.6,
+      borderLeft: `4px solid ${colors.purple}`, marginBottom: 20, ...font.regular, letterSpacing: 0.25,
+    },
+
+    /* Builder buttons */
+    btnCancel: {
+      padding: "14px 24px", fontSize: 15, ...font.bold, border: "none",
+      borderRadius: 6, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6,
+      background: colors.grey10, color: colors.grey100, letterSpacing: 0.25,
+    },
+    btnConfirm: {
+      padding: "14px 24px", fontSize: 15, ...font.bold, border: "none",
+      borderRadius: 6, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6,
       background: colors.purple, color: colors.white, letterSpacing: 0.25,
     },
 
@@ -559,7 +590,7 @@ export default function SlotPriorities() {
 
   const totalSlots = SLOTS.length;
   const unsetCount = stats["unset"] || 0;
-  const priorityStatKeys = Object.keys(stats).filter((k) => k !== "unset").sort((a, b) => parseInt(b) - parseInt(a));
+  const priorityStatKeys = Object.keys(stats).filter((k) => k !== "unset").sort((a, b) => parseInt(a) - parseInt(b));
 
   return (
     <div style={s.page}>
@@ -631,52 +662,70 @@ export default function SlotPriorities() {
                 {/* Builder */}
                 {showBuilder && (
                   <div style={s.builder}>
-                    <div style={{ ...font.semibold, fontSize: 14, marginBottom: 14, color: colors.grey100 }}>New Rule</div>
+                    <div style={s.builderTitle}>New Rule</div>
 
                     <div style={s.condGroup}>
                       <div style={s.condTitle}>Match slots where</div>
                       <div style={s.row}>
                         <span style={s.label}>Condition</span>
-                        <select style={s.select} value={condType} onChange={(e) => setCondType(e.target.value)}>
-                          <option value="day">Day is…</option>
-                          <option value="time_exact">Start time is exactly…</option>
-                          <option value="time_range">Start time is between…</option>
-                          <option value="location">Location is…</option>
-                          <option value="day_time">Day + start time are…</option>
-                        </select>
+                        <div style={s.selectWrapper}>
+                          <select style={s.select} value={condType} onChange={(e) => setCondType(e.target.value)}>
+                            <option value="day">Day is…</option>
+                            <option value="time_exact">Start time is exactly…</option>
+                            <option value="time_range">Start time is between…</option>
+                            <option value="location">Location is…</option>
+                            <option value="day_time">Day + start time are…</option>
+                          </select>
+                          <span style={s.selectIcon}><CaretDownIcon /></span>
+                        </div>
                       </div>
 
                       {condType === "day" && (
                         <div style={s.row}>
                           <span style={s.label}>Day</span>
-                          <select style={s.select} value={condDay} onChange={(e) => setCondDay(e.target.value)}>
-                            {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
-                          </select>
+                          <div style={s.selectWrapper}>
+                            <select style={s.select} value={condDay} onChange={(e) => setCondDay(e.target.value)}>
+                              {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
+                            </select>
+                            <span style={s.selectIcon}><CalendarIcon /></span>
+                          </div>
                         </div>
                       )}
 
                       {condType === "time_exact" && (
                         <div style={s.row}>
                           <span style={s.label}>Start time</span>
-                          <input type="time" style={{ ...s.input, width: 120 }} value={condTimeExact} onChange={(e) => setCondTimeExact(e.target.value)} />
+                          <div style={s.inputWrapper}>
+                            <input type="time" style={{ ...s.input, width: 160 }} value={condTimeExact} onChange={(e) => setCondTimeExact(e.target.value)} />
+                            <span style={s.inputIcon}><CalendarIcon /></span>
+                          </div>
                         </div>
                       )}
 
                       {condType === "time_range" && (
                         <div style={s.row}>
                           <span style={s.label}>Between</span>
-                          <input type="time" style={{ ...s.input, width: 120 }} value={condTimeFrom} onChange={(e) => setCondTimeFrom(e.target.value)} />
-                          <span style={{ fontSize: 13, color: colors.grey80 }}>and</span>
-                          <input type="time" style={{ ...s.input, width: 120 }} value={condTimeTo} onChange={(e) => setCondTimeTo(e.target.value)} />
+                          <div style={s.inputWrapper}>
+                            <input type="time" style={{ ...s.input, width: 140 }} value={condTimeFrom} onChange={(e) => setCondTimeFrom(e.target.value)} />
+                            <span style={s.inputIcon}><CalendarIcon /></span>
+                          </div>
+                          <span style={{ fontSize: 12, color: colors.grey80, ...font.regular }}>and</span>
+                          <div style={s.inputWrapper}>
+                            <input type="time" style={{ ...s.input, width: 140 }} value={condTimeTo} onChange={(e) => setCondTimeTo(e.target.value)} />
+                            <span style={s.inputIcon}><CalendarIcon /></span>
+                          </div>
                         </div>
                       )}
 
                       {condType === "location" && (
                         <div style={s.row}>
                           <span style={s.label}>Location</span>
-                          <select style={s.select} value={condLocation} onChange={(e) => setCondLocation(e.target.value)}>
-                            {LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}
-                          </select>
+                          <div style={s.selectWrapper}>
+                            <select style={s.select} value={condLocation} onChange={(e) => setCondLocation(e.target.value)}>
+                              {LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}
+                            </select>
+                            <span style={s.selectIcon}><CaretDownIcon /></span>
+                          </div>
                         </div>
                       )}
 
@@ -684,13 +733,19 @@ export default function SlotPriorities() {
                         <>
                           <div style={s.row}>
                             <span style={s.label}>Day</span>
-                            <select style={s.select} value={condDayTime} onChange={(e) => setCondDayTime(e.target.value)}>
-                              {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
-                            </select>
+                            <div style={s.selectWrapper}>
+                              <select style={s.select} value={condDayTime} onChange={(e) => setCondDayTime(e.target.value)}>
+                                {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
+                              </select>
+                              <span style={s.selectIcon}><CalendarIcon /></span>
+                            </div>
                           </div>
                           <div style={s.row}>
                             <span style={s.label}>Start time</span>
-                            <input type="time" style={{ ...s.input, width: 120 }} value={condDayTimeTime} onChange={(e) => setCondDayTimeTime(e.target.value)} />
+                            <div style={s.inputWrapper}>
+                              <input type="time" style={{ ...s.input, width: 160 }} value={condDayTimeTime} onChange={(e) => setCondDayTimeTime(e.target.value)} />
+                              <span style={s.inputIcon}><CalendarIcon /></span>
+                            </div>
                           </div>
                         </>
                       )}
@@ -698,18 +753,21 @@ export default function SlotPriorities() {
 
                     <div style={s.condGroup}>
                       <div style={s.condTitle}>Set priority to</div>
-                      <div style={s.row}>
+                      <div style={{ ...s.row, marginBottom: 0 }}>
                         <span style={s.label}>Priority</span>
-                        <input type="number" style={{ ...s.input, width: 72, textAlign: "center" }} value={condPriority} min={1} max={100} onChange={(e) => setCondPriority(e.target.value)} />
-                        <span style={{ fontSize: 11, color: colors.grey40 }}>100 = highest, 1 = lowest (default)</span>
+                        <div style={s.inputWrapper}>
+                          <input type="number" style={{ ...s.input, width: 160 }} value={condPriority} min={1} max={100} onChange={(e) => setCondPriority(e.target.value)} />
+                          <span style={s.inputIcon}><CalendarIcon /></span>
+                        </div>
+                        <span style={{ fontSize: 12, color: colors.grey40, ...font.regular, letterSpacing: 0.25, whiteSpace: "nowrap" }}>1 = highest, 100 = lowest</span>
                       </div>
                     </div>
 
                     <div style={s.nlPreview}>{nlPreview}</div>
 
-                    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", paddingTop: 14, borderTop: `1px solid ${colors.grey20}` }}>
-                      <button style={s.btnOutline} onClick={() => setShowBuilder(false)}>Cancel</button>
-                      <button style={s.btnPrimary} onClick={addRule}>Add Rule</button>
+                    <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+                      <button style={s.btnCancel} onClick={() => setShowBuilder(false)}>Cancel</button>
+                      <button style={s.btnConfirm} onClick={addRule}>Confirm Rule</button>
                     </div>
                   </div>
                 )}
