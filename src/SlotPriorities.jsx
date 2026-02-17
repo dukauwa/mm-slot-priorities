@@ -950,20 +950,6 @@ export default function SlotPriorities() {
               <h2 style={s.previewTitle}>Live Preview</h2>
               <span style={s.slotCount}>{totalSlots} slots</span>
             </div>
-            {expandedRule && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: colors.purple5, borderRadius: 6, border: `1px solid ${colors.purple}` }}>
-                <span style={{ ...font.regular, fontSize: 12, color: colors.purple, letterSpacing: 0.25, flex: 1 }}>
-                  Filtering by Rule {rules.indexOf(expandedRule) + 1}
-                </span>
-                <button
-                  style={{ width: 32, height: 32, border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 8, borderRadius: 4 }}
-                  onClick={cancelEdit}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.purple} strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
-                </button>
-              </div>
-            )}
-
             {/* Stats — separate card boxes, max 3 per row, excess fills space */}
             {(() => {
               const allCells = [];
