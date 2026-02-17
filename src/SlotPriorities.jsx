@@ -434,9 +434,9 @@ export default function SlotPriorities() {
     emptySub: { ...font.regular, fontSize: 12, color: colors.grey80, lineHeight: "21px" },
 
     /* Builder */
-    builder: { border: `2px dashed ${colors.grey10}`, borderRadius: 8, padding: 24 },
+    builder: { border: `1px solid ${colors.grey10}`, borderRadius: 8, padding: 24 },
     builderTitle: { ...font.semibold, fontSize: 14, marginBottom: 20, color: colors.grey100 },
-    condGroup: { padding: 16, background: colors.grey5, borderRadius: 8, marginBottom: 16 },
+    condGroup: { padding: 16, background: "transparent", borderRadius: 8, marginBottom: 16 },
     condTitle: { ...font.regular, fontSize: 12, letterSpacing: 0.25, color: colors.grey40, marginBottom: 16 },
     row: { display: "flex", alignItems: "center", gap: 8, marginBottom: 16 },
     label: { ...font.regular, fontSize: 14, color: colors.grey100, width: 111, flexShrink: 0, letterSpacing: 0.25 },
