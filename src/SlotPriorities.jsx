@@ -68,7 +68,10 @@ const SLOTS = generateSlots();
 /* ── Helpers ─────────────────────────────────────────────── */
 function slotMatchesRule(slot, rule) {
   switch (rule.type) {
-    case "day": return slot.day === rule.day;
+    case "day": {
+      const dayMatch = !rule.day || rule.day === "All days" ? true : slot.day === rule.day;
+      return dayMatch;
+    }
     case "time_range": {
       const dayMatch = !rule.day || rule.day === "All days" ? true : slot.day === rule.day;
       return dayMatch && slot.startTime >= rule.timeFrom && slot.startTime <= rule.timeTo;
@@ -77,7 +80,10 @@ function slotMatchesRule(slot, rule) {
       const dayMatch = !rule.day || rule.day === "All days" ? true : slot.day === rule.day;
       return dayMatch && slot.location === rule.location;
     }
-    case "day_time": return slot.day === rule.day && slot.startTime === rule.time;
+    case "day_time": {
+      const dayMatch = !rule.day || rule.day === "All days" ? true : slot.day === rule.day;
+      return dayMatch && slot.startTime === rule.time;
+    }
     default: return false;
   }
 }
@@ -88,10 +94,10 @@ function getRuleDescription(rule) {
   );
   const dayLabel = (!rule.day || rule.day === "All days") ? "all days" : rule.day;
   switch (rule.type) {
-    case "day": return <span>All slots on <V>{rule.day}</V> → Priority <V>{rule.priority}</V></span>;
+    case "day": return <span>All slots on <V>{dayLabel}</V> → Priority <V>{rule.priority}</V></span>;
     case "time_range": return <span>Slots between <V>{rule.timeFrom}</V> and <V>{rule.timeTo}</V> on <V>{dayLabel}</V> → Priority <V>{rule.priority}</V></span>;
     case "location": return <span>Slots at <V>{rule.location}</V> on <V>{dayLabel}</V> → Priority <V>{rule.priority}</V></span>;
-    case "day_time": return <span>All slots on <V>{rule.day}</V> at <V>{rule.time}</V> → Priority <V>{rule.priority}</V></span>;
+    case "day_time": return <span>All slots on <V>{dayLabel}</V> at <V>{rule.time}</V> → Priority <V>{rule.priority}</V></span>;
     default: return null;
   }
 }
@@ -310,10 +316,10 @@ export default function SlotPriorities() {
     const trDay = condTimeRangeDay === "All days" ? "all days" : condTimeRangeDay;
     const locDay = condLocationDay === "All days" ? "all days" : condLocationDay;
     switch (condType) {
-      case "day": return <span>All slots on {h(condDay)} → priority {h(p)}</span>;
+      case "day": return <span>All slots on {h(condDay === "All days" ? "all days" : condDay)} → priority {h(p)}</span>;
       case "time_range": return <span>Slots between {h(condTimeFrom)} and {h(condTimeTo)} on {h(trDay)} → priority {h(p)}</span>;
       case "location": return <span>Slots at {h(condLocation)} on {h(locDay)} → priority {h(p)}</span>;
-      case "day_time": return <span>Slots on {h(condDayTime)} at {h(condDayTimeTime)} → priority {h(p)}</span>;
+      case "day_time": return <span>Slots on {h(condDayTime === "All days" ? "all days" : condDayTime)} at {h(condDayTimeTime)} → priority {h(p)}</span>;
       default: return null;
     }
   }, [condType, condDay, condTimeFrom, condTimeTo, condTimeRangeDay, condLocation, condLocationDay, condDayTime, condDayTimeTime, condPriority]);
@@ -716,6 +722,7 @@ export default function SlotPriorities() {
                             <span style={s.label}>Day</span>
                             <div style={s.selectWrapper}>
                               <select style={s.select} value={editDraft.day} onChange={(e) => updateDraftField("day", e.target.value)}>
+                                <option value="All days">All days</option>
                                 {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
                               </select>
                               <span style={s.selectIcon}><CalendarIcon /></span>
@@ -729,6 +736,7 @@ export default function SlotPriorities() {
                               <span style={s.label}>Day</span>
                               <div style={s.selectWrapper}>
                                 <select style={s.select} value={editDraft.day} onChange={(e) => updateDraftField("day", e.target.value)}>
+                                  <option value="All days">All days</option>
                                   {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
                                 </select>
                                 <span style={s.selectIcon}><CalendarIcon /></span>
@@ -841,6 +849,7 @@ export default function SlotPriorities() {
                       <span style={s.label}>Day</span>
                       <div style={s.selectWrapper}>
                         <select style={s.select} value={condDay} onChange={(e) => setCondDay(e.target.value)}>
+                          <option value="All days">All days</option>
                           {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
                         </select>
                         <span style={s.selectIcon}><CalendarIcon /></span>
@@ -854,6 +863,7 @@ export default function SlotPriorities() {
                         <span style={s.label}>Day</span>
                         <div style={s.selectWrapper}>
                           <select style={s.select} value={condDayTime} onChange={(e) => setCondDayTime(e.target.value)}>
+                            <option value="All days">All days</option>
                             {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
                           </select>
                           <span style={s.selectIcon}><CalendarIcon /></span>
