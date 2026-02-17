@@ -116,6 +116,13 @@ const MinusIcon = () => (
   </svg>
 );
 
+const PencilIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M16.475 5.408l2.117 2.117m-.756-3.982L12.109 9.27a2.118 2.118 0 00-.58 1.082L11 13l2.648-.53c.41-.082.786-.283 1.082-.579l5.727-5.727a1.853 1.853 0 10-2.621-2.621z" stroke={colors.grey60} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M19 15v3a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h3" stroke={colors.grey60} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
 const ChevronUp = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.grey60} strokeWidth="2"><path d="M18 15l-6-6-6 6" /></svg>;
 const ChevronDown = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.grey60} strokeWidth="2"><path d="M6 9l6 6 6-6" /></svg>;
 const XIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.grey60} strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>;
@@ -138,6 +145,7 @@ export default function SlotPriorities() {
   const [rules, setRules] = useState([]);
   const [idCounter, setIdCounter] = useState(0);
   const [showBuilder, setShowBuilder] = useState(false);
+  const [expandedRuleId, setExpandedRuleId] = useState(null);
   const [toast, setToast] = useState(null);
 
   // Builder state
@@ -172,8 +180,17 @@ export default function SlotPriorities() {
     showToastMsg("Rule added");
   };
 
+  const updateRuleField = (id, field, value) => {
+    setRules(rules.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
+  };
+
+  const toggleExpandRule = (id) => {
+    setExpandedRuleId(expandedRuleId === id ? null : id);
+  };
+
   const removeRule = (id) => {
     setRules(rules.filter((r) => r.id !== id));
+    if (expandedRuleId === id) setExpandedRuleId(null);
     showToastMsg("Rule removed");
   };
 
@@ -228,11 +245,19 @@ export default function SlotPriorities() {
   /* ── Build preview data ──────────────────────────────── */
   /* Group consecutive slots by priority within each day. Slots with
      the same priority that appear consecutively are merged into one row
-     showing the time range span, slot count, and priority. */
+     showing the time range span, slot count, and priority.
+     When a rule is expanded (editing), filter preview to only matching slots. */
+  const expandedRule = expandedRuleId !== null ? rules.find((r) => r.id === expandedRuleId) : null;
+
   const previewByDay = useMemo(() => {
     const dayMap = {};
     DAYS.forEach((d) => { dayMap[d.label] = []; });
-    sortedSlots.forEach((slot) => { dayMap[slot.day]?.push(slot); });
+
+    const filteredSlots = expandedRule
+      ? sortedSlots.filter((slot) => slotMatchesRule(slot, expandedRule))
+      : sortedSlots;
+
+    filteredSlots.forEach((slot) => { dayMap[slot.day]?.push(slot); });
 
     const result = {};
     Object.entries(dayMap).forEach(([day, slots]) => {
@@ -257,7 +282,7 @@ export default function SlotPriorities() {
       result[day] = groups;
     });
     return result;
-  }, [sortedSlots, slotPriorities]);
+  }, [sortedSlots, slotPriorities, expandedRule]);
 
   const totalSlots = SLOTS.length;
   const unsetCount = stats["unset"] || 0;
@@ -276,7 +301,7 @@ export default function SlotPriorities() {
       overflow: "hidden",
     },
 
-    /* Top header bar */
+    /* Top header bar — always fixed at top */
     header: {
       display: "flex",
       alignItems: "center",
@@ -286,6 +311,9 @@ export default function SlotPriorities() {
       borderLeft: `5px solid ${colors.purple}`,
       background: colors.white,
       flexShrink: 0,
+      position: "sticky",
+      top: 0,
+      zIndex: 50,
     },
     headerLeft: { display: "flex", alignItems: "center", gap: 36 },
     logo: { height: 27, display: "block" },
@@ -326,6 +354,12 @@ export default function SlotPriorities() {
     ruleItem: {
       background: colors.white, border: `1px solid ${colors.grey10}`, borderRadius: 4,
       padding: 16, display: "flex", flexDirection: "column", gap: 0,
+      cursor: "pointer", transition: "border-color 0.15s, background 0.15s",
+    },
+    ruleItemExpanded: {
+      background: colors.purple5, border: `1px solid ${colors.purple}`, borderRadius: 4,
+      padding: 16, display: "flex", flexDirection: "column", gap: 0,
+      cursor: "pointer",
     },
     ruleRow: { display: "flex", alignItems: "center", gap: 16, width: "100%" },
     rulePriorityBadge: {
@@ -410,23 +444,23 @@ export default function SlotPriorities() {
     previewTitle: { ...font.bold, fontSize: 16, color: colors.grey100, letterSpacing: 0.25, flex: 1 },
     slotCount: { ...font.regular, fontSize: 12, color: colors.grey80, lineHeight: "21px" },
 
-    /* Stats — bordered 3-column table grid */
+    /* Stats — separate card boxes, 3 per row max, excess fills space on new row */
     statsGrid: {
-      display: "grid", gridTemplateColumns: "1fr 1fr 1fr",
-      border: `1px solid ${colors.purple}`, borderRadius: 8, overflow: "hidden",
+      display: "grid",
+      gridTemplateColumns: "repeat(3, 1fr)",
+      gap: 8,
     },
-    statCell: {
-      padding: "12px 8px", display: "flex", flexDirection: "column",
-      gap: 2, alignItems: "center", justifyContent: "center",
-      borderRight: `1px solid ${colors.purple}`, borderBottom: `1px solid ${colors.purple}`,
+    statCard: {
+      padding: "16px 8px", display: "flex", flexDirection: "column",
+      gap: 4, alignItems: "center", justifyContent: "center",
+      border: `1px solid ${colors.purple}`, borderRadius: 8, background: colors.white,
     },
-    statCellLast: { borderRight: "none" },
     statNumber: { ...font.bold, fontSize: 20, color: colors.purple, letterSpacing: 0.25 },
     statLabel: { ...font.bold, fontSize: 12, color: colors.purple, letterSpacing: 0.25, textAlign: "center" },
-    statUnsetCell: {
-      padding: "12px 8px", display: "flex", flexDirection: "column",
-      gap: 2, alignItems: "center", justifyContent: "center",
-      borderRight: "none", background: colors.grey5,
+    statUnsetCard: {
+      padding: "16px 8px", display: "flex", flexDirection: "column",
+      gap: 4, alignItems: "center", justifyContent: "center",
+      border: `1px solid ${colors.grey20}`, borderRadius: 8, background: colors.grey5,
     },
     statUnsetNumber: { ...font.bold, fontSize: 20, color: colors.grey100, letterSpacing: 0.25 },
     statUnsetLabel: { ...font.bold, fontSize: 12, color: colors.grey40, letterSpacing: 0.25, textAlign: "center" },
@@ -518,19 +552,135 @@ export default function SlotPriorities() {
             {/* Rules list */}
             {rules.map((rule, idx) => {
               const matchCount = SLOTS.filter((sl) => slotMatchesRule(sl, rule)).length;
+              const isExpanded = expandedRuleId === rule.id;
               return (
-                <div key={rule.id} style={s.ruleItem}>
+                <div
+                  key={rule.id}
+                  style={isExpanded ? s.ruleItemExpanded : s.ruleItem}
+                  onClick={() => toggleExpandRule(rule.id)}
+                >
                   <div style={s.ruleRow}>
                     <div style={{ cursor: "grab", display: "flex", alignItems: "center" }}><GripIcon /></div>
                     <div style={s.rulePriorityBadge}>{rule.priority}</div>
                     <div style={s.ruleDescription}>{getRuleDescription(rule)}</div>
                     <div style={s.ruleActions}>
-                      <button style={{ ...s.actionBtn, opacity: idx === 0 ? 0.25 : 1 }} onClick={() => moveRule(rule.id, -1)} disabled={idx === 0}><ChevronUp /></button>
-                      <button style={{ ...s.actionBtn, opacity: idx === rules.length - 1 ? 0.25 : 1 }} onClick={() => moveRule(rule.id, 1)} disabled={idx === rules.length - 1}><ChevronDown /></button>
-                      <button style={s.actionBtn} onClick={() => removeRule(rule.id)}><XIcon /></button>
+                      <button style={{ ...s.actionBtn, opacity: idx === 0 ? 0.25 : 1 }} onClick={(e) => { e.stopPropagation(); moveRule(rule.id, -1); }} disabled={idx === 0}><ChevronUp /></button>
+                      <button style={{ ...s.actionBtn, opacity: idx === rules.length - 1 ? 0.25 : 1 }} onClick={(e) => { e.stopPropagation(); moveRule(rule.id, 1); }} disabled={idx === rules.length - 1}><ChevronDown /></button>
+                      <button style={s.actionBtn} onClick={(e) => { e.stopPropagation(); removeRule(rule.id); }}><XIcon /></button>
                     </div>
                   </div>
                   <div style={s.ruleMeta}>{matchCount} slot{matchCount !== 1 ? "s" : ""} matched</div>
+
+                  {/* Inline edit fields — shown when expanded */}
+                  {isExpanded && (
+                    <div style={{ marginTop: 16, borderTop: `1px solid ${colors.purple}`, paddingTop: 16 }} onClick={(e) => e.stopPropagation()}>
+                      <div style={{ ...s.condGroup, marginBottom: 0 }}>
+                        <div style={s.condTitle}>Edit rule</div>
+                        <div style={s.row}>
+                          <span style={s.label}>Condition</span>
+                          <div style={s.selectWrapper}>
+                            <select style={s.select} value={rule.type} onChange={(e) => {
+                              const newType = e.target.value;
+                              const updated = { ...rule, type: newType };
+                              if (newType === "day" && !updated.day) updated.day = DAYS[0].label;
+                              if (newType === "time_exact" && !updated.time) updated.time = "09:00";
+                              if (newType === "time_range") { if (!updated.timeFrom) updated.timeFrom = "10:00"; if (!updated.timeTo) updated.timeTo = "11:00"; }
+                              if (newType === "location" && !updated.location) updated.location = LOCATIONS[0];
+                              if (newType === "day_time") { if (!updated.day) updated.day = DAYS[0].label; if (!updated.time) updated.time = "09:00"; }
+                              setRules(rules.map((r) => (r.id === rule.id ? updated : r)));
+                            }}>
+                              <option value="day">Day is…</option>
+                              <option value="time_exact">Start time is exactly…</option>
+                              <option value="time_range">Start time is between…</option>
+                              <option value="location">Location is…</option>
+                              <option value="day_time">Day + start time are…</option>
+                            </select>
+                            <span style={s.selectIcon}><CaretDownIcon /></span>
+                          </div>
+                        </div>
+
+                        {rule.type === "day" && (
+                          <div style={s.row}>
+                            <span style={s.label}>Day</span>
+                            <div style={s.selectWrapper}>
+                              <select style={s.select} value={rule.day} onChange={(e) => updateRuleField(rule.id, "day", e.target.value)}>
+                                {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
+                              </select>
+                              <span style={s.selectIcon}><CalendarIcon /></span>
+                            </div>
+                          </div>
+                        )}
+
+                        {rule.type === "time_exact" && (
+                          <div style={s.row}>
+                            <span style={s.label}>Start time</span>
+                            <div style={s.inputWrapper}>
+                              <input type="time" style={{ ...s.input, width: 160 }} value={rule.time} onChange={(e) => updateRuleField(rule.id, "time", e.target.value)} />
+                              <span style={s.inputIcon}><CalendarIcon /></span>
+                            </div>
+                          </div>
+                        )}
+
+                        {rule.type === "time_range" && (
+                          <div style={s.row}>
+                            <span style={s.label}>Between</span>
+                            <div style={s.inputWrapper}>
+                              <input type="time" style={{ ...s.input, width: 140 }} value={rule.timeFrom} onChange={(e) => updateRuleField(rule.id, "timeFrom", e.target.value)} />
+                              <span style={s.inputIcon}><CalendarIcon /></span>
+                            </div>
+                            <span style={{ fontSize: 12, color: colors.grey80, ...font.regular }}>and</span>
+                            <div style={s.inputWrapper}>
+                              <input type="time" style={{ ...s.input, width: 140 }} value={rule.timeTo} onChange={(e) => updateRuleField(rule.id, "timeTo", e.target.value)} />
+                              <span style={s.inputIcon}><CalendarIcon /></span>
+                            </div>
+                          </div>
+                        )}
+
+                        {rule.type === "location" && (
+                          <div style={s.row}>
+                            <span style={s.label}>Location</span>
+                            <div style={s.selectWrapper}>
+                              <select style={s.select} value={rule.location} onChange={(e) => updateRuleField(rule.id, "location", e.target.value)}>
+                                {LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}
+                              </select>
+                              <span style={s.selectIcon}><CaretDownIcon /></span>
+                            </div>
+                          </div>
+                        )}
+
+                        {rule.type === "day_time" && (
+                          <>
+                            <div style={s.row}>
+                              <span style={s.label}>Day</span>
+                              <div style={s.selectWrapper}>
+                                <select style={s.select} value={rule.day} onChange={(e) => updateRuleField(rule.id, "day", e.target.value)}>
+                                  {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
+                                </select>
+                                <span style={s.selectIcon}><CalendarIcon /></span>
+                              </div>
+                            </div>
+                            <div style={s.row}>
+                              <span style={s.label}>Start time</span>
+                              <div style={s.inputWrapper}>
+                                <input type="time" style={{ ...s.input, width: 160 }} value={rule.time} onChange={(e) => updateRuleField(rule.id, "time", e.target.value)} />
+                                <span style={s.inputIcon}><CalendarIcon /></span>
+                              </div>
+                            </div>
+                          </>
+                        )}
+
+                        <div style={{ ...s.row, marginBottom: 0 }}>
+                          <span style={s.label}>Priority</span>
+                          <div style={s.inputWrapper}>
+                            <input type="number" style={{ ...s.input, width: 160 }} value={rule.priority} min={1} max={100}
+                              onChange={(e) => updateRuleField(rule.id, "priority", Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))} />
+                            <span style={s.inputIcon}><CalendarIcon /></span>
+                          </div>
+                          <span style={{ fontSize: 12, color: colors.grey40, ...font.regular, letterSpacing: 0.25, whiteSpace: "nowrap" }}>1 = highest, 100 = lowest</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -658,35 +808,35 @@ export default function SlotPriorities() {
               <h2 style={s.previewTitle}>Live Preview</h2>
               <span style={s.slotCount}>{totalSlots} slots</span>
             </div>
+            {expandedRule && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: colors.purple5, borderRadius: 6, border: `1px solid ${colors.purple}` }}>
+                <span style={{ ...font.regular, fontSize: 12, color: colors.purple, letterSpacing: 0.25, flex: 1 }}>
+                  Filtering by Rule {rules.indexOf(expandedRule) + 1}
+                </span>
+                <button
+                  style={{ width: 32, height: 32, border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 8, borderRadius: 4 }}
+                  onClick={() => setExpandedRuleId(null)}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.purple} strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                </button>
+              </div>
+            )}
 
-            {/* Stats grid — 3-column bordered table */}
+            {/* Stats — separate card boxes, max 3 per row, excess fills space */}
             {(() => {
-              const cells = [];
-              priorityStatKeys.forEach((k) => cells.push({ key: k, count: stats[k], label: `P${k}`, type: "purple" }));
-              if (unsetCount > 0) cells.push({ key: "unset", count: unsetCount, label: "UNSET", type: "unset" });
-              // Ensure we always fill to complete rows of 3
-              while (cells.length % 3 !== 0) cells.push(null);
-              const borderColor = cells.some(c => c && c.type === "purple") ? colors.purple : colors.grey20;
+              const allCells = [];
+              priorityStatKeys.forEach((k) => allCells.push({ key: k, count: stats[k], label: `P${k}`, type: "purple" }));
+              if (unsetCount > 0) allCells.push({ key: "unset", count: unsetCount, label: "UNSET", type: "unset" });
+              const total = allCells.length;
+              const cols = total <= 3 ? total : 3;
               return (
-                <div style={{ ...s.statsGrid, borderColor }}>
-                  {cells.map((cell, i) => {
-                    const isLastInRow = (i + 1) % 3 === 0;
-                    const isLastRow = i >= cells.length - 3;
-                    if (!cell) {
-                      return <div key={`empty-${i}`} style={{ ...s.statCell, borderRight: isLastInRow ? "none" : `1px solid ${borderColor}`, borderBottom: isLastRow ? "none" : `1px solid ${borderColor}` }} />;
-                    }
-                    if (cell.type === "unset") {
-                      return (
-                        <div key={cell.key} style={{ ...s.statUnsetCell, borderRight: isLastInRow ? "none" : `1px solid ${borderColor}`, borderBottom: isLastRow ? "none" : `1px solid ${borderColor}` }}>
-                          <span style={s.statUnsetNumber}>{cell.count}</span>
-                          <span style={s.statUnsetLabel}>{cell.label}</span>
-                        </div>
-                      );
-                    }
+                <div style={{ ...s.statsGrid, gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+                  {allCells.map((cell) => {
+                    const isUnset = cell.type === "unset";
                     return (
-                      <div key={cell.key} style={{ ...s.statCell, borderRight: isLastInRow ? "none" : `1px solid ${borderColor}`, borderBottom: isLastRow ? "none" : `1px solid ${borderColor}` }}>
-                        <span style={s.statNumber}>{cell.count}</span>
-                        <span style={s.statLabel}>{cell.label}</span>
+                      <div key={cell.key} style={isUnset ? s.statUnsetCard : s.statCard}>
+                        <span style={isUnset ? s.statUnsetNumber : s.statNumber}>{cell.count}</span>
+                        <span style={isUnset ? s.statUnsetLabel : s.statLabel}>{cell.label}</span>
                       </div>
                     );
                   })}
