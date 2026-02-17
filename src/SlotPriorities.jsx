@@ -5,6 +5,7 @@ import gripLogo from "./assets/0cd0e8be5eebbb0fd15be4cdbbc90cb59d5ed0de.png";
 const colors = {
   white: "#FFFFFF",
   grey5: "#F4F4F4",
+  grey10: "#E9EAEA",
   grey20: "#D4D5D6",
   grey30: "#BEC0C0",
   grey40: "#A9ABAC",
@@ -12,8 +13,8 @@ const colors = {
   grey80: "#535759",
   grey100: "#282D30",
   purple: "#522DA6",
+  purple5: "#F6F4FC",
   purple10: "#EDE8FA",
-  grey10: "#E9EAEA",
 };
 
 const font = {
@@ -65,17 +66,6 @@ function generateSlots() {
 const SLOTS = generateSlots();
 
 /* ── Helpers ─────────────────────────────────────────────── */
-function getPriorityColor(p) {
-  // 1 = highest priority, 100 = lowest priority
-  const n = parseInt(p);
-  if (n <= 5) return { bg: colors.purple10, fg: colors.purple, badge: colors.purple, border: colors.purple };
-  if (n <= 20) return { bg: "#eee8f6", fg: "#6b45b8", badge: "#6b45b8", border: "#6b45b8" };
-  if (n <= 50) return { bg: "#fdf3ec", fg: "#c47a2d", badge: "#c47a2d", border: "#c47a2d" };
-  if (n <= 75) return { bg: "#fdf8ec", fg: "#8b6914", badge: "#8b6914", border: "#8b6914" };
-  if (n <= 99) return { bg: "#eef2f6", fg: "#4a6a8a", badge: "#4a6a8a", border: "#4a6a8a" };
-  return { bg: colors.grey5, fg: colors.grey40, badge: colors.grey30, border: colors.grey60 };
-}
-
 function slotMatchesRule(slot, rule) {
   switch (rule.type) {
     case "day": return slot.day === rule.day;
@@ -89,14 +79,14 @@ function slotMatchesRule(slot, rule) {
 
 function getRuleDescription(rule) {
   const V = ({ children }) => (
-    <span style={{ background: colors.purple10, padding: "1px 6px", borderRadius: 4, ...font.bold, fontSize: 12, color: colors.purple, letterSpacing: 0.25 }}>{children}</span>
+    <span style={{ ...font.bold, color: colors.purple }}>{children}</span>
   );
   switch (rule.type) {
     case "day": return <span>All slots on <V>{rule.day}</V> → Priority <V>{rule.priority}</V></span>;
-    case "time_exact": return <span>Slots starting at <V>{rule.time}</V> any day → Priority <V>{rule.priority}</V></span>;
-    case "time_range": return <span>Slots starting <V>{rule.timeFrom}</V> – <V>{rule.timeTo}</V> any day → Priority <V>{rule.priority}</V></span>;
-    case "location": return <span>Slots at <V>{rule.location}</V> → Priority <V>{rule.priority}</V></span>;
-    case "day_time": return <span>Slots on <V>{rule.day}</V> at <V>{rule.time}</V> → Priority <V>{rule.priority}</V></span>;
+    case "time_exact": return <span>Slots starting at <V>{rule.time}</V> on any day → Priority <V>{rule.priority}</V></span>;
+    case "time_range": return <span>Slots starting between <V>{rule.timeFrom}</V> and <V>{rule.timeTo}</V> on any day → Priority <V>{rule.priority}</V></span>;
+    case "location": return <span>Slots at <V>{rule.location}</V> on any day → Priority <V>{rule.priority}</V></span>;
+    case "day_time": return <span>All slots on <V>{rule.day}</V> at <V>{rule.time}</V> → Priority <V>{rule.priority}</V></span>;
     default: return null;
   }
 }
@@ -126,10 +116,10 @@ const MinusIcon = () => (
   </svg>
 );
 
-const ChevronUp = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 15l-6-6-6 6" /></svg>;
-const ChevronDown = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6" /></svg>;
-const XIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>;
-const GripIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" /><circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" /><circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" /></svg>;
+const ChevronUp = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.grey60} strokeWidth="2"><path d="M18 15l-6-6-6 6" /></svg>;
+const ChevronDown = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.grey60} strokeWidth="2"><path d="M6 9l6 6 6-6" /></svg>;
+const XIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.grey60} strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>;
+const GripIcon = () => <svg width="12" height="12" viewBox="0 0 24 24" fill={colors.grey40}><circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" /><circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" /><circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" /></svg>;
 
 const CaretDownIcon = () => (
   <svg width="12" height="7" viewBox="0 0 12 7" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -200,7 +190,7 @@ export default function SlotPriorities() {
     for (const rule of rules) {
       if (slotMatchesRule(slot, rule)) return rule.priority;
     }
-    return null; // unset
+    return null;
   };
 
   const sortedSlots = useMemo(() =>
@@ -235,15 +225,55 @@ export default function SlotPriorities() {
     }
   }, [condType, condDay, condTimeExact, condTimeFrom, condTimeTo, condLocation, condDayTime, condDayTimeTime, condPriority]);
 
+  /* ── Build preview data ──────────────────────────────── */
+  /* Group consecutive slots by priority within each day. Slots with
+     the same priority that appear consecutively are merged into one row
+     showing the time range span, slot count, and priority. */
+  const previewByDay = useMemo(() => {
+    const dayMap = {};
+    DAYS.forEach((d) => { dayMap[d.label] = []; });
+    sortedSlots.forEach((slot) => { dayMap[slot.day]?.push(slot); });
+
+    const result = {};
+    Object.entries(dayMap).forEach(([day, slots]) => {
+      const groups = [];
+      let i = 0;
+      while (i < slots.length) {
+        const slot = slots[i];
+        const p = slotPriorities[slot.id];
+        let runEnd = i + 1;
+        while (runEnd < slots.length && slotPriorities[slots[runEnd].id] === p) {
+          runEnd++;
+        }
+        const lastSlot = slots[runEnd - 1];
+        groups.push({
+          startTime: slot.startTime,
+          endTime: lastSlot.endTime,
+          count: runEnd - i,
+          priority: p,
+        });
+        i = runEnd;
+      }
+      result[day] = groups;
+    });
+    return result;
+  }, [sortedSlots, slotPriorities]);
+
+  const totalSlots = SLOTS.length;
+  const unsetCount = stats["unset"] || 0;
+  const priorityStatKeys = Object.keys(stats).filter((k) => k !== "unset").sort((a, b) => parseInt(a) - parseInt(b));
+
   /* ── Styles ──────────────────────────────────────────── */
   const s = {
-    /* Page wrapper */
     page: {
-      minHeight: "100vh",
+      height: "100vh",
       background: colors.white,
       ...font.regular,
       color: colors.grey100,
       WebkitFontSmoothing: "antialiased",
+      display: "flex",
+      flexDirection: "column",
+      overflow: "hidden",
     },
 
     /* Top header bar */
@@ -255,189 +285,81 @@ export default function SlotPriorities() {
       borderBottom: `1px solid ${colors.grey20}`,
       borderLeft: `5px solid ${colors.purple}`,
       background: colors.white,
-    },
-    headerLeft: {
-      display: "flex",
-      alignItems: "center",
-      gap: 36,
-    },
-    logo: {
-      height: 27,
-      display: "block",
-    },
-    headerTitle: {
-      ...font.bold,
-      fontSize: 18,
-      color: colors.grey100,
-      letterSpacing: -0.1,
-    },
-    goBackBtn: {
-      display: "flex",
-      alignItems: "center",
-      gap: 8,
-      padding: "8px 24px 8px 16px",
-      border: `1px solid ${colors.purple}`,
-      borderRadius: 4,
-      background: colors.white,
-      cursor: "pointer",
-      ...font.bold,
-      fontSize: 12,
-      color: colors.purple,
-      letterSpacing: 0.25,
-    },
-
-    /* Content area */
-    content: {
-      padding: "32px 80px 80px",
-      maxWidth: 1440,
-    },
-    h1: {
-      ...font.semibold,
-      fontSize: 20,
-      color: colors.grey100,
-      letterSpacing: -0.14,
-      marginBottom: 4,
-    },
-    subtitle: {
-      ...font.regular,
-      fontSize: 12,
-      color: colors.grey100,
-      letterSpacing: 0.25,
-      lineHeight: 1.4,
-      maxWidth: 1280,
-    },
-
-    /* Two-column layout */
-    layout: {
-      display: "flex",
-      gap: 16,
-      alignItems: "flex-start",
-      marginTop: 16,
-    },
-    leftCol: {
-      flex: 1,
-      minWidth: 0,
-    },
-    rightCol: {
-      width: 474,
       flexShrink: 0,
-      position: "sticky",
-      top: 20,
+    },
+    headerLeft: { display: "flex", alignItems: "center", gap: 36 },
+    logo: { height: 27, display: "block" },
+    headerTitle: { ...font.bold, fontSize: 18, color: colors.grey100, letterSpacing: -0.1 },
+    goBackBtn: {
+      display: "flex", alignItems: "center", gap: 8,
+      padding: "8px 24px 8px 16px", border: `1px solid ${colors.purple}`,
+      borderRadius: 4, background: colors.white, cursor: "pointer",
+      ...font.bold, fontSize: 12, color: colors.purple, letterSpacing: 0.25,
     },
 
-    /* Card chrome */
-    card: {
-      background: colors.white,
-      borderRadius: 8,
-      overflow: "hidden",
-    },
-    cardHeaderRow: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      padding: 16,
-      height: 64,
-      boxSizing: "border-box",
-      borderTop: `1px solid ${colors.grey20}`,
-      borderLeft: `1px solid ${colors.grey20}`,
-      borderRight: `1px solid ${colors.grey20}`,
-      borderTopLeftRadius: 8,
-      borderTopRightRadius: 8,
-    },
-    cardBody: {
-      border: `1px solid ${colors.grey20}`,
-      borderBottomLeftRadius: 8,
-      borderBottomRightRadius: 8,
-      padding: 16,
-      background: colors.white,
-    },
-    cardH2: {
-      ...font.bold,
-      fontSize: 16,
-      color: colors.grey100,
-      letterSpacing: 0.25,
-    },
+    /* Main body (below header) — both cols scroll independently */
+    body: { display: "flex", flex: 1, minHeight: 0, overflow: "hidden" },
 
-    /* Add Rule button (outlined) */
+    /* Left column */
+    leftCol: { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", overflowY: "auto" },
+
+    /* Title bar (with Add Rule) */
+    titleBar: {
+      display: "flex", gap: 40, alignItems: "flex-end",
+      padding: "24px 32px", borderBottom: `1px solid ${colors.grey20}`,
+      flexShrink: 0,
+    },
+    titleContent: { flex: 1, display: "flex", flexDirection: "column", gap: 4 },
+    h1: { ...font.semibold, fontSize: 20, color: colors.grey100, letterSpacing: -0.14 },
+    subtitle: { ...font.regular, fontSize: 12, color: colors.grey100, letterSpacing: 0.25, lineHeight: 1.4 },
     addRuleBtn: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 10,
-      height: 32,
-      padding: "4px 16px 4px 8px",
-      border: `1px solid ${colors.purple}`,
-      borderRadius: 4,
-      background: colors.white,
-      cursor: "pointer",
-      ...font.bold,
-      fontSize: 14,
-      color: colors.purple,
-      letterSpacing: 0.25,
+      display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+      height: 32, padding: "4px 16px 4px 8px", border: `1px solid ${colors.purple}`,
+      borderRadius: 4, background: colors.white, cursor: "pointer",
+      ...font.bold, fontSize: 14, color: colors.purple, letterSpacing: 0.25, flexShrink: 0,
+    },
+
+    /* Rules list area */
+    rulesArea: { padding: "16px 32px", display: "flex", flexDirection: "column", gap: 16, flex: 1 },
+
+    /* Rule item — new flat style */
+    ruleItem: {
+      background: colors.white, border: `1px solid ${colors.grey10}`, borderRadius: 4,
+      padding: 16, display: "flex", flexDirection: "column", gap: 0,
+    },
+    ruleRow: { display: "flex", alignItems: "center", gap: 16, width: "100%" },
+    rulePriorityBadge: {
+      background: colors.purple10, borderRadius: 27, padding: "8px 12px",
+      ...font.regular, fontSize: 12, color: colors.purple, letterSpacing: 0.25,
+      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+      minWidth: 20,
+    },
+    ruleDescription: { flex: 1, ...font.bold, fontSize: 14, color: colors.grey100, letterSpacing: 0.25, lineHeight: 1.4 },
+    ruleActions: { display: "flex", gap: 4, alignItems: "center", flexShrink: 0 },
+    actionBtn: {
+      width: 32, height: 32, border: "none", background: "transparent",
+      cursor: "pointer", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center",
+      padding: 8,
+    },
+    ruleMeta: {
+      ...font.regular, fontSize: 12, color: colors.grey60, letterSpacing: 0.25,
+      paddingLeft: 75,
     },
 
     /* Empty state */
     emptyState: {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 24,
-      padding: "206px 0",
+      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+      gap: 24, padding: "160px 0", flex: 1,
     },
     emptyIcon: {
-      width: 56,
-      height: 56,
-      borderRadius: "50%",
-      background: colors.purple10,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    emptyTitle: {
-      ...font.bold,
-      fontSize: 16,
-      color: colors.grey100,
-      lineHeight: "21px",
-    },
-    emptySub: {
-      ...font.regular,
-      fontSize: 12,
-      color: colors.grey80,
-      lineHeight: "21px",
-    },
-
-    /* Rule item */
-    ruleItem: {
-      display: "flex",
-      alignItems: "flex-start",
-      gap: 10,
-      padding: "12px 14px",
-      border: `1px solid ${colors.grey20}`,
-      borderRadius: 8,
-      marginBottom: 8,
-      background: colors.white,
-    },
-    ruleOrder: (p) => {
-      const c = getPriorityColor(p);
-      return {
-        width: 26, height: 26, borderRadius: "50%",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: 11, ...font.bold, flexShrink: 0, marginTop: 1,
-        background: c.bg, color: c.fg,
-      };
-    },
-    ruleContent: { flex: 1, minWidth: 0 },
-    ruleStatement: { ...font.regular, fontSize: 13, lineHeight: 1.5, marginBottom: 2, letterSpacing: 0.25, color: colors.grey100 },
-    ruleMeta: { ...font.regular, fontSize: 11, color: colors.grey40, letterSpacing: 0.25 },
-    actionBtn: {
-      width: 28, height: 28, border: "none", background: "transparent",
-      color: colors.grey40, cursor: "pointer", borderRadius: 6,
+      width: 56, height: 56, borderRadius: "50%", background: colors.purple10,
       display: "flex", alignItems: "center", justifyContent: "center",
     },
+    emptyTitle: { ...font.bold, fontSize: 16, color: colors.grey100, lineHeight: "21px" },
+    emptySub: { ...font.regular, fontSize: 12, color: colors.grey80, lineHeight: "21px" },
 
     /* Builder */
-    builder: { border: `2px dashed ${colors.grey10}`, borderRadius: 8, padding: 24, marginTop: 6 },
+    builder: { border: `2px dashed ${colors.grey10}`, borderRadius: 8, padding: 24 },
     builderTitle: { ...font.semibold, fontSize: 14, marginBottom: 20, color: colors.grey100 },
     condGroup: { padding: 16, background: colors.grey5, borderRadius: 8, marginBottom: 16 },
     condTitle: { ...font.regular, fontSize: 12, letterSpacing: 0.25, color: colors.grey40, marginBottom: 16 },
@@ -462,8 +384,6 @@ export default function SlotPriorities() {
       background: colors.grey5, borderRadius: 8, padding: 16, fontSize: 14, lineHeight: 1.6,
       borderLeft: `4px solid ${colors.purple}`, marginBottom: 20, ...font.regular, letterSpacing: 0.25,
     },
-
-    /* Builder buttons */
     btnCancel: {
       padding: "14px 24px", fontSize: 15, ...font.bold, border: "none",
       borderRadius: 6, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6,
@@ -475,72 +395,68 @@ export default function SlotPriorities() {
       background: colors.purple, color: colors.white, letterSpacing: 0.25,
     },
 
-    /* Live Preview panel */
+    /* Right column — Live Preview sidebar */
+    rightCol: {
+      width: 359, flexShrink: 0, borderLeft: `1px solid ${colors.grey20}`,
+      display: "flex", flexDirection: "column", overflowY: "auto",
+    },
+
+    /* Preview header section */
+    previewHeader: {
+      padding: 24, borderBottom: `1px solid ${colors.grey20}`,
+      display: "flex", flexDirection: "column", gap: 24,
+    },
+    previewTitleRow: { display: "flex", alignItems: "center", gap: 2 },
+    previewTitle: { ...font.bold, fontSize: 16, color: colors.grey100, letterSpacing: 0.25, flex: 1 },
     slotCount: { ...font.regular, fontSize: 12, color: colors.grey80, lineHeight: "21px" },
 
-    /* Stats summary pill */
-    statBlock: {
-      background: colors.grey5,
-      borderRadius: 8,
-      padding: 16,
-      display: "flex",
-      flexDirection: "column",
-      gap: 2,
-      alignItems: "center",
-      justifyContent: "center",
-      width: "100%",
+    /* Stats — bordered 3-column table grid */
+    statsGrid: {
+      display: "grid", gridTemplateColumns: "1fr 1fr 1fr",
+      border: `1px solid ${colors.purple}`, borderRadius: 8, overflow: "hidden",
     },
-    statNumber: { ...font.bold, fontSize: 20, color: colors.grey100, letterSpacing: 0.25 },
-    statLabel: { ...font.bold, fontSize: 12, color: colors.grey40, letterSpacing: 0.25, textTransform: "uppercase" },
+    statCell: {
+      padding: "12px 8px", display: "flex", flexDirection: "column",
+      gap: 2, alignItems: "center", justifyContent: "center",
+      borderRight: `1px solid ${colors.purple}`, borderBottom: `1px solid ${colors.purple}`,
+    },
+    statCellLast: { borderRight: "none" },
+    statNumber: { ...font.bold, fontSize: 20, color: colors.purple, letterSpacing: 0.25 },
+    statLabel: { ...font.bold, fontSize: 12, color: colors.purple, letterSpacing: 0.25, textAlign: "center" },
+    statUnsetCell: {
+      padding: "12px 8px", display: "flex", flexDirection: "column",
+      gap: 2, alignItems: "center", justifyContent: "center",
+      borderRight: "none", background: colors.grey5,
+    },
+    statUnsetNumber: { ...font.bold, fontSize: 20, color: colors.grey100, letterSpacing: 0.25 },
+    statUnsetLabel: { ...font.bold, fontSize: 12, color: colors.grey40, letterSpacing: 0.25, textAlign: "center" },
 
-    /* Day group in preview */
+    /* Preview slots section */
+    previewSlots: { padding: 24, borderBottom: `1px solid ${colors.grey20}` },
     dayLabel: { ...font.bold, fontSize: 12, color: colors.grey100, letterSpacing: 0.25, marginBottom: 8 },
-    slotRow: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      padding: "8px 16px",
-      background: colors.grey5,
-      borderRadius: 8,
-      borderLeft: `4px solid ${colors.grey60}`,
+
+    /* Slot row — purple for matched, grey for unset */
+    slotRowPurple: {
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      padding: "8px 12px", background: colors.purple10, borderRadius: 6,
+      borderLeft: `3px solid ${colors.purple}`,
     },
-    slotRowWithPriority: (p) => {
-      const c = getPriorityColor(p);
-      return {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "8px 16px",
-        background: colors.grey5,
-        borderRadius: 8,
-        borderLeft: `4px solid ${c.border}`,
-      };
+    slotRowUnset: {
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      padding: "8px 12px", background: colors.grey5, borderRadius: 6,
+      borderLeft: `3px solid ${colors.grey30}`,
     },
     slotTime: { ...font.regular, fontSize: 14, color: colors.grey100, letterSpacing: 0.25 },
-    slotMeta: { ...font.regular, fontSize: 12, color: colors.grey40, letterSpacing: 0.25, textAlign: "center" },
-    unsetBadge: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "0 8px",
-      borderRadius: 30,
-      background: colors.grey30,
+    slotMetaPurple: { ...font.regular, fontSize: 12, color: colors.purple, letterSpacing: 0.25, textAlign: "center" },
+    slotMetaGrey: { ...font.regular, fontSize: 12, color: colors.grey40, letterSpacing: 0.25, textAlign: "center" },
+    priorityBadge: {
+      display: "flex", alignItems: "center", justifyContent: "center",
+      width: 32, height: 16, borderRadius: 30, background: colors.purple,
+      ...font.bold, fontSize: 10, color: colors.white, letterSpacing: 0.25,
     },
-    priorityBadge: (p) => {
-      const c = getPriorityColor(p);
-      return {
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "2px 10px",
-        borderRadius: 30,
-        background: c.badge,
-        ...font.bold,
-        fontSize: 11,
-        color: colors.white,
-        letterSpacing: 0.25,
-        minWidth: 20,
-      };
+    unsetBadge: {
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: "0 8px", borderRadius: 30, background: colors.grey30,
     },
 
     /* Toast */
@@ -551,46 +467,6 @@ export default function SlotPriorities() {
       boxShadow: "0 12px 40px rgba(0,0,0,0.12)", zIndex: 100,
     },
   };
-
-  /* ── Build preview data ──────────────────────────────── */
-  const previewByDay = useMemo(() => {
-    const dayMap = {};
-    DAYS.forEach((d) => { dayMap[d.label] = []; });
-
-    sortedSlots.forEach((slot) => {
-      dayMap[slot.day]?.push(slot);
-    });
-
-    // Collapse consecutive same-priority slots per day
-    const result = {};
-    Object.entries(dayMap).forEach(([day, slots]) => {
-      const groups = [];
-      let i = 0;
-      while (i < slots.length) {
-        const slot = slots[i];
-        const p = slotPriorities[slot.id];
-        let runEnd = i + 1;
-        while (runEnd < slots.length && slotPriorities[slots[runEnd].id] === p) {
-          runEnd++;
-        }
-        const lastSlot = slots[runEnd - 1];
-        groups.push({
-          startTime: slot.startTime,
-          endTime: lastSlot.endTime,
-          count: runEnd - i,
-          priority: p,
-        });
-        i = runEnd;
-      }
-      result[day] = groups;
-    });
-
-    return result;
-  }, [sortedSlots, slotPriorities]);
-
-  const totalSlots = SLOTS.length;
-  const unsetCount = stats["unset"] || 0;
-  const priorityStatKeys = Object.keys(stats).filter((k) => k !== "unset").sort((a, b) => parseInt(a) - parseInt(b));
 
   return (
     <div style={s.page}>
@@ -606,232 +482,249 @@ export default function SlotPriorities() {
         </button>
       </header>
 
-      {/* ── Content ─────────────────────────────────── */}
-      <div style={s.content}>
-        <h1 style={s.h1}>Slot Priorities</h1>
-        <p style={s.subtitle}>
-          Create rules to control which time slots get the best-ranked meetings. Rules are evaluated top to bottom, the first matching rule wins. Unmatched slots are left unset (–). Priority values can be 1–100.
-        </p>
-
-        <div style={s.layout}>
-          {/* ── Left: Priority Rules ───────────────── */}
-          <div style={s.leftCol}>
-            <div style={s.card}>
-              <div style={s.cardHeaderRow}>
-                <h2 style={s.cardH2}>Priority Rules</h2>
-                <button style={s.addRuleBtn} onClick={() => setShowBuilder(true)}>
-                  <PlusIcon />
-                  Add Rule
-                </button>
-              </div>
-
-              <div style={s.cardBody}>
-                {/* Empty state */}
-                {rules.length === 0 && !showBuilder && (
-                  <div style={s.emptyState}>
-                    <div style={s.emptyIcon}>
-                      <FlagIcon />
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 2, alignItems: "center" }}>
-                      <span style={s.emptyTitle}>No priority rules yet</span>
-                      <span style={s.emptySub}>All slots will receive default (–) priority</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Rules list */}
-                {rules.map((rule, idx) => {
-                  const matchCount = SLOTS.filter((sl) => slotMatchesRule(sl, rule)).length;
-                  return (
-                    <div key={rule.id} style={s.ruleItem}>
-                      <div style={{ color: colors.grey40, paddingTop: 2, cursor: "grab" }}><GripIcon /></div>
-                      <div style={s.ruleOrder(rule.priority)}>{rule.priority}</div>
-                      <div style={s.ruleContent}>
-                        <div style={s.ruleStatement}>{getRuleDescription(rule)}</div>
-                        <div style={s.ruleMeta}>{matchCount} slot{matchCount !== 1 ? "s" : ""} matched</div>
-                      </div>
-                      <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
-                        <button style={{ ...s.actionBtn, opacity: idx === 0 ? 0.25 : 1 }} onClick={() => moveRule(rule.id, -1)} disabled={idx === 0}><ChevronUp /></button>
-                        <button style={{ ...s.actionBtn, opacity: idx === rules.length - 1 ? 0.25 : 1 }} onClick={() => moveRule(rule.id, 1)} disabled={idx === rules.length - 1}><ChevronDown /></button>
-                        <button style={s.actionBtn} onClick={() => removeRule(rule.id)}><XIcon /></button>
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {/* Builder */}
-                {showBuilder && (
-                  <div style={s.builder}>
-                    <div style={s.builderTitle}>New Rule</div>
-
-                    <div style={s.condGroup}>
-                      <div style={s.condTitle}>Match slots where</div>
-                      <div style={s.row}>
-                        <span style={s.label}>Condition</span>
-                        <div style={s.selectWrapper}>
-                          <select style={s.select} value={condType} onChange={(e) => setCondType(e.target.value)}>
-                            <option value="day">Day is…</option>
-                            <option value="time_exact">Start time is exactly…</option>
-                            <option value="time_range">Start time is between…</option>
-                            <option value="location">Location is…</option>
-                            <option value="day_time">Day + start time are…</option>
-                          </select>
-                          <span style={s.selectIcon}><CaretDownIcon /></span>
-                        </div>
-                      </div>
-
-                      {condType === "day" && (
-                        <div style={s.row}>
-                          <span style={s.label}>Day</span>
-                          <div style={s.selectWrapper}>
-                            <select style={s.select} value={condDay} onChange={(e) => setCondDay(e.target.value)}>
-                              {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
-                            </select>
-                            <span style={s.selectIcon}><CalendarIcon /></span>
-                          </div>
-                        </div>
-                      )}
-
-                      {condType === "time_exact" && (
-                        <div style={s.row}>
-                          <span style={s.label}>Start time</span>
-                          <div style={s.inputWrapper}>
-                            <input type="time" style={{ ...s.input, width: 160 }} value={condTimeExact} onChange={(e) => setCondTimeExact(e.target.value)} />
-                            <span style={s.inputIcon}><CalendarIcon /></span>
-                          </div>
-                        </div>
-                      )}
-
-                      {condType === "time_range" && (
-                        <div style={s.row}>
-                          <span style={s.label}>Between</span>
-                          <div style={s.inputWrapper}>
-                            <input type="time" style={{ ...s.input, width: 140 }} value={condTimeFrom} onChange={(e) => setCondTimeFrom(e.target.value)} />
-                            <span style={s.inputIcon}><CalendarIcon /></span>
-                          </div>
-                          <span style={{ fontSize: 12, color: colors.grey80, ...font.regular }}>and</span>
-                          <div style={s.inputWrapper}>
-                            <input type="time" style={{ ...s.input, width: 140 }} value={condTimeTo} onChange={(e) => setCondTimeTo(e.target.value)} />
-                            <span style={s.inputIcon}><CalendarIcon /></span>
-                          </div>
-                        </div>
-                      )}
-
-                      {condType === "location" && (
-                        <div style={s.row}>
-                          <span style={s.label}>Location</span>
-                          <div style={s.selectWrapper}>
-                            <select style={s.select} value={condLocation} onChange={(e) => setCondLocation(e.target.value)}>
-                              {LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}
-                            </select>
-                            <span style={s.selectIcon}><CaretDownIcon /></span>
-                          </div>
-                        </div>
-                      )}
-
-                      {condType === "day_time" && (
-                        <>
-                          <div style={s.row}>
-                            <span style={s.label}>Day</span>
-                            <div style={s.selectWrapper}>
-                              <select style={s.select} value={condDayTime} onChange={(e) => setCondDayTime(e.target.value)}>
-                                {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
-                              </select>
-                              <span style={s.selectIcon}><CalendarIcon /></span>
-                            </div>
-                          </div>
-                          <div style={s.row}>
-                            <span style={s.label}>Start time</span>
-                            <div style={s.inputWrapper}>
-                              <input type="time" style={{ ...s.input, width: 160 }} value={condDayTimeTime} onChange={(e) => setCondDayTimeTime(e.target.value)} />
-                              <span style={s.inputIcon}><CalendarIcon /></span>
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    <div style={s.condGroup}>
-                      <div style={s.condTitle}>Set priority to</div>
-                      <div style={{ ...s.row, marginBottom: 0 }}>
-                        <span style={s.label}>Priority</span>
-                        <div style={s.inputWrapper}>
-                          <input type="number" style={{ ...s.input, width: 160 }} value={condPriority} min={1} max={100} onChange={(e) => setCondPriority(e.target.value)} />
-                          <span style={s.inputIcon}><CalendarIcon /></span>
-                        </div>
-                        <span style={{ fontSize: 12, color: colors.grey40, ...font.regular, letterSpacing: 0.25, whiteSpace: "nowrap" }}>1 = highest, 100 = lowest</span>
-                      </div>
-                    </div>
-
-                    <div style={s.nlPreview}>{nlPreview}</div>
-
-                    <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-                      <button style={s.btnCancel} onClick={() => setShowBuilder(false)}>Cancel</button>
-                      <button style={s.btnConfirm} onClick={addRule}>Confirm Rule</button>
-                    </div>
-                  </div>
-                )}
-              </div>
+      {/* ── Body: Left + Right columns ────────────── */}
+      <div style={s.body}>
+        {/* ── Left column ────────────────────────── */}
+        <div style={s.leftCol}>
+          {/* Title bar with Add Rule */}
+          <div style={s.titleBar}>
+            <div style={s.titleContent}>
+              <h1 style={s.h1}>Slot Priorities</h1>
+              <p style={s.subtitle}>
+                Create rules to control which time slots get the best-ranked meetings. Rules are evaluated top to bottom, the first matching rule wins. Unmatched slots are left unset (–). Priority values can be 1–100.
+              </p>
             </div>
+            <button style={s.addRuleBtn} onClick={() => setShowBuilder(true)}>
+              <PlusIcon />
+              Add Rule
+            </button>
           </div>
 
-          {/* ── Right: Live Preview ────────────────── */}
-          <div style={s.rightCol}>
-            <div style={s.card}>
-              <div style={s.cardHeaderRow}>
-                <h2 style={s.cardH2}>Live Preview</h2>
-                <span style={s.slotCount}>{totalSlots} slots</span>
+          {/* Rules area */}
+          <div style={s.rulesArea}>
+            {/* Empty state */}
+            {rules.length === 0 && !showBuilder && (
+              <div style={s.emptyState}>
+                <div style={s.emptyIcon}>
+                  <FlagIcon />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 2, alignItems: "center" }}>
+                  <span style={s.emptyTitle}>No priority rules yet</span>
+                  <span style={s.emptySub}>All slots will receive default (–) priority</span>
+                </div>
               </div>
+            )}
 
-              <div style={s.cardBody}>
-                {/* Stats summary */}
-                <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-                  {unsetCount > 0 && (
-                    <div style={{ ...s.statBlock, flex: priorityStatKeys.length > 0 ? "0 0 auto" : 1 }}>
-                      <span style={s.statNumber}>{unsetCount}</span>
-                      <span style={s.statLabel}>UNSET</span>
+            {/* Rules list */}
+            {rules.map((rule, idx) => {
+              const matchCount = SLOTS.filter((sl) => slotMatchesRule(sl, rule)).length;
+              return (
+                <div key={rule.id} style={s.ruleItem}>
+                  <div style={s.ruleRow}>
+                    <div style={{ cursor: "grab", display: "flex", alignItems: "center" }}><GripIcon /></div>
+                    <div style={s.rulePriorityBadge}>{rule.priority}</div>
+                    <div style={s.ruleDescription}>{getRuleDescription(rule)}</div>
+                    <div style={s.ruleActions}>
+                      <button style={{ ...s.actionBtn, opacity: idx === 0 ? 0.25 : 1 }} onClick={() => moveRule(rule.id, -1)} disabled={idx === 0}><ChevronUp /></button>
+                      <button style={{ ...s.actionBtn, opacity: idx === rules.length - 1 ? 0.25 : 1 }} onClick={() => moveRule(rule.id, 1)} disabled={idx === rules.length - 1}><ChevronDown /></button>
+                      <button style={s.actionBtn} onClick={() => removeRule(rule.id)}><XIcon /></button>
+                    </div>
+                  </div>
+                  <div style={s.ruleMeta}>{matchCount} slot{matchCount !== 1 ? "s" : ""} matched</div>
+                </div>
+              );
+            })}
+
+            {/* Builder */}
+            {showBuilder && (
+              <div style={s.builder}>
+                <div style={s.builderTitle}>New Rule</div>
+
+                <div style={s.condGroup}>
+                  <div style={s.condTitle}>Match slots where</div>
+                  <div style={s.row}>
+                    <span style={s.label}>Condition</span>
+                    <div style={s.selectWrapper}>
+                      <select style={s.select} value={condType} onChange={(e) => setCondType(e.target.value)}>
+                        <option value="day">Day is…</option>
+                        <option value="time_exact">Start time is exactly…</option>
+                        <option value="time_range">Start time is between…</option>
+                        <option value="location">Location is…</option>
+                        <option value="day_time">Day + start time are…</option>
+                      </select>
+                      <span style={s.selectIcon}><CaretDownIcon /></span>
+                    </div>
+                  </div>
+
+                  {condType === "day" && (
+                    <div style={s.row}>
+                      <span style={s.label}>Day</span>
+                      <div style={s.selectWrapper}>
+                        <select style={s.select} value={condDay} onChange={(e) => setCondDay(e.target.value)}>
+                          {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
+                        </select>
+                        <span style={s.selectIcon}><CalendarIcon /></span>
+                      </div>
                     </div>
                   )}
-                  {priorityStatKeys.map((k) => {
-                    const c = getPriorityColor(k);
-                    return (
-                      <div key={k} style={{ ...s.statBlock, background: c.bg }}>
-                        <span style={{ ...s.statNumber, color: c.fg }}>{stats[k]}</span>
-                        <span style={{ ...s.statLabel, color: c.fg }}>P{k}</span>
-                      </div>
-                    );
-                  })}
-                </div>
 
-                {/* Day groups */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                  {DAYS.map((day) => {
-                    const groups = previewByDay[day.label] || [];
-                    return (
-                      <div key={day.label}>
-                        <div style={s.dayLabel}>{day.label}</div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                          {groups.map((g, i) => (
-                            <div key={i} style={g.priority !== null ? s.slotRowWithPriority(g.priority) : s.slotRow}>
-                              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                                <span style={s.slotTime}>{g.startTime} - {g.endTime}</span>
-                                <span style={s.slotMeta}>{g.count} Slot{g.count !== 1 ? "s" : ""}</span>
-                              </div>
-                              {g.priority !== null ? (
-                                <span style={s.priorityBadge(g.priority)}>{g.priority}</span>
-                              ) : (
-                                <div style={s.unsetBadge}>
-                                  <MinusIcon />
-                                </div>
-                              )}
-                            </div>
-                          ))}
+                  {condType === "time_exact" && (
+                    <div style={s.row}>
+                      <span style={s.label}>Start time</span>
+                      <div style={s.inputWrapper}>
+                        <input type="time" style={{ ...s.input, width: 160 }} value={condTimeExact} onChange={(e) => setCondTimeExact(e.target.value)} />
+                        <span style={s.inputIcon}><CalendarIcon /></span>
+                      </div>
+                    </div>
+                  )}
+
+                  {condType === "time_range" && (
+                    <div style={s.row}>
+                      <span style={s.label}>Between</span>
+                      <div style={s.inputWrapper}>
+                        <input type="time" style={{ ...s.input, width: 140 }} value={condTimeFrom} onChange={(e) => setCondTimeFrom(e.target.value)} />
+                        <span style={s.inputIcon}><CalendarIcon /></span>
+                      </div>
+                      <span style={{ fontSize: 12, color: colors.grey80, ...font.regular }}>and</span>
+                      <div style={s.inputWrapper}>
+                        <input type="time" style={{ ...s.input, width: 140 }} value={condTimeTo} onChange={(e) => setCondTimeTo(e.target.value)} />
+                        <span style={s.inputIcon}><CalendarIcon /></span>
+                      </div>
+                    </div>
+                  )}
+
+                  {condType === "location" && (
+                    <div style={s.row}>
+                      <span style={s.label}>Location</span>
+                      <div style={s.selectWrapper}>
+                        <select style={s.select} value={condLocation} onChange={(e) => setCondLocation(e.target.value)}>
+                          {LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}
+                        </select>
+                        <span style={s.selectIcon}><CaretDownIcon /></span>
+                      </div>
+                    </div>
+                  )}
+
+                  {condType === "day_time" && (
+                    <>
+                      <div style={s.row}>
+                        <span style={s.label}>Day</span>
+                        <div style={s.selectWrapper}>
+                          <select style={s.select} value={condDayTime} onChange={(e) => setCondDayTime(e.target.value)}>
+                            {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
+                          </select>
+                          <span style={s.selectIcon}><CalendarIcon /></span>
                         </div>
                       </div>
+                      <div style={s.row}>
+                        <span style={s.label}>Start time</span>
+                        <div style={s.inputWrapper}>
+                          <input type="time" style={{ ...s.input, width: 160 }} value={condDayTimeTime} onChange={(e) => setCondDayTimeTime(e.target.value)} />
+                          <span style={s.inputIcon}><CalendarIcon /></span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div style={s.condGroup}>
+                  <div style={s.condTitle}>Set priority to</div>
+                  <div style={{ ...s.row, marginBottom: 0 }}>
+                    <span style={s.label}>Priority</span>
+                    <div style={s.inputWrapper}>
+                      <input type="number" style={{ ...s.input, width: 160 }} value={condPriority} min={1} max={100} onChange={(e) => setCondPriority(e.target.value)} />
+                      <span style={s.inputIcon}><CalendarIcon /></span>
+                    </div>
+                    <span style={{ fontSize: 12, color: colors.grey40, ...font.regular, letterSpacing: 0.25, whiteSpace: "nowrap" }}>1 = highest, 100 = lowest</span>
+                  </div>
+                </div>
+
+                <div style={s.nlPreview}>{nlPreview}</div>
+
+                <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+                  <button style={s.btnCancel} onClick={() => setShowBuilder(false)}>Cancel</button>
+                  <button style={s.btnConfirm} onClick={addRule}>Confirm Rule</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Right column: Live Preview ─────────── */}
+        <div style={s.rightCol}>
+          {/* Header + Stats */}
+          <div style={s.previewHeader}>
+            <div style={s.previewTitleRow}>
+              <h2 style={s.previewTitle}>Live Preview</h2>
+              <span style={s.slotCount}>{totalSlots} slots</span>
+            </div>
+
+            {/* Stats grid — 3-column bordered table */}
+            {(() => {
+              const cells = [];
+              priorityStatKeys.forEach((k) => cells.push({ key: k, count: stats[k], label: `P${k}`, type: "purple" }));
+              if (unsetCount > 0) cells.push({ key: "unset", count: unsetCount, label: "UNSET", type: "unset" });
+              // Ensure we always fill to complete rows of 3
+              while (cells.length % 3 !== 0) cells.push(null);
+              const borderColor = cells.some(c => c && c.type === "purple") ? colors.purple : colors.grey20;
+              return (
+                <div style={{ ...s.statsGrid, borderColor }}>
+                  {cells.map((cell, i) => {
+                    const isLastInRow = (i + 1) % 3 === 0;
+                    const isLastRow = i >= cells.length - 3;
+                    if (!cell) {
+                      return <div key={`empty-${i}`} style={{ ...s.statCell, borderRight: isLastInRow ? "none" : `1px solid ${borderColor}`, borderBottom: isLastRow ? "none" : `1px solid ${borderColor}` }} />;
+                    }
+                    if (cell.type === "unset") {
+                      return (
+                        <div key={cell.key} style={{ ...s.statUnsetCell, borderRight: isLastInRow ? "none" : `1px solid ${borderColor}`, borderBottom: isLastRow ? "none" : `1px solid ${borderColor}` }}>
+                          <span style={s.statUnsetNumber}>{cell.count}</span>
+                          <span style={s.statUnsetLabel}>{cell.label}</span>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div key={cell.key} style={{ ...s.statCell, borderRight: isLastInRow ? "none" : `1px solid ${borderColor}`, borderBottom: isLastRow ? "none" : `1px solid ${borderColor}` }}>
+                        <span style={s.statNumber}>{cell.count}</span>
+                        <span style={s.statLabel}>{cell.label}</span>
+                      </div>
                     );
                   })}
                 </div>
-              </div>
+              );
+            })()}
+          </div>
+
+          {/* Day groups */}
+          <div style={s.previewSlots}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {DAYS.map((day) => {
+                const groups = previewByDay[day.label] || [];
+                return (
+                  <div key={day.label}>
+                    <div style={s.dayLabel}>{day.label}</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      {groups.map((g, i) => (
+                        <div key={i} style={g.priority !== null ? s.slotRowPurple : s.slotRowUnset}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                            <span style={s.slotTime}>{g.startTime} - {g.endTime}</span>
+                            <span style={g.priority !== null ? s.slotMetaPurple : s.slotMetaGrey}>
+                              {g.count === 1 ? "1" : `${g.count} Slots`}
+                            </span>
+                          </div>
+                          {g.priority !== null ? (
+                            <div style={s.priorityBadge}>{g.priority}</div>
+                          ) : (
+                            <div style={s.unsetBadge}>
+                              <MinusIcon />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
