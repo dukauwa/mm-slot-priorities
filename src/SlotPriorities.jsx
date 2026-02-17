@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import gripLogo from "./assets/0cd0e8be5eebbb0fd15be4cdbbc90cb59d5ed0de.png";
 
 /* ── Design Tokens (from Figma) ─────────────────────────────── */
@@ -146,6 +146,7 @@ export default function SlotPriorities() {
   const [idCounter, setIdCounter] = useState(0);
   const [showBuilder, setShowBuilder] = useState(false);
   const [expandedRuleId, setExpandedRuleId] = useState(null);
+  const [editDraft, setEditDraft] = useState(null);
   const [toast, setToast] = useState(null);
 
   // Builder state
@@ -158,6 +159,21 @@ export default function SlotPriorities() {
   const [condDayTime, setCondDayTime] = useState(DAYS[0].label);
   const [condDayTimeTime, setCondDayTimeTime] = useState("09:00");
   const [condPriority, setCondPriority] = useState("1");
+
+  const expandedCardRef = useRef(null);
+
+  // Click outside expanded card → close edit mode
+  useEffect(() => {
+    if (expandedRuleId === null) return;
+    const handleClickOutside = (e) => {
+      if (expandedCardRef.current && !expandedCardRef.current.contains(e.target)) {
+        setExpandedRuleId(null);
+        setEditDraft(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [expandedRuleId]);
 
   const showToastMsg = useCallback((msg) => {
     setToast(msg);
@@ -180,17 +196,41 @@ export default function SlotPriorities() {
     showToastMsg("Rule added");
   };
 
-  const updateRuleField = (id, field, value) => {
-    setRules(rules.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
+  const updateDraftField = (field, value) => {
+    setEditDraft((d) => (d ? { ...d, [field]: value } : d));
   };
 
   const toggleExpandRule = (id) => {
-    setExpandedRuleId(expandedRuleId === id ? null : id);
+    if (expandedRuleId === id) {
+      // Collapse — discard draft
+      setExpandedRuleId(null);
+      setEditDraft(null);
+    } else {
+      // Expand — snapshot rule into draft
+      const rule = rules.find((r) => r.id === id);
+      setExpandedRuleId(id);
+      setEditDraft(rule ? { ...rule } : null);
+    }
+  };
+
+  const confirmEdit = () => {
+    if (editDraft) {
+      const d = { ...editDraft, priority: Math.max(1, Math.min(100, parseInt(editDraft.priority) || 1)) };
+      setRules(rules.map((r) => (r.id === d.id ? d : r)));
+      showToastMsg("Rule updated");
+    }
+    setExpandedRuleId(null);
+    setEditDraft(null);
+  };
+
+  const cancelEdit = () => {
+    setExpandedRuleId(null);
+    setEditDraft(null);
   };
 
   const removeRule = (id) => {
     setRules(rules.filter((r) => r.id !== id));
-    if (expandedRuleId === id) setExpandedRuleId(null);
+    if (expandedRuleId === id) { setExpandedRuleId(null); setEditDraft(null); }
     showToastMsg("Rule removed");
   };
 
@@ -248,13 +288,14 @@ export default function SlotPriorities() {
      showing the time range span, slot count, and priority.
      When a rule is expanded (editing), filter preview to only matching slots. */
   const expandedRule = expandedRuleId !== null ? rules.find((r) => r.id === expandedRuleId) : null;
+  const previewRule = editDraft || expandedRule;
 
   const previewByDay = useMemo(() => {
     const dayMap = {};
     DAYS.forEach((d) => { dayMap[d.label] = []; });
 
-    const filteredSlots = expandedRule
-      ? sortedSlots.filter((slot) => slotMatchesRule(slot, expandedRule))
+    const filteredSlots = previewRule
+      ? sortedSlots.filter((slot) => slotMatchesRule(slot, previewRule))
       : sortedSlots;
 
     filteredSlots.forEach((slot) => { dayMap[slot.day]?.push(slot); });
@@ -282,7 +323,7 @@ export default function SlotPriorities() {
       result[day] = groups;
     });
     return result;
-  }, [sortedSlots, slotPriorities, expandedRule]);
+  }, [sortedSlots, slotPriorities, previewRule]);
 
   const totalSlots = SLOTS.length;
   const unsetCount = stats["unset"] || 0;
@@ -556,8 +597,9 @@ export default function SlotPriorities() {
               return (
                 <div
                   key={rule.id}
+                  ref={isExpanded ? expandedCardRef : undefined}
                   style={isExpanded ? s.ruleItemExpanded : s.ruleItem}
-                  onClick={() => toggleExpandRule(rule.id)}
+                  onClick={() => !isExpanded && toggleExpandRule(rule.id)}
                 >
                   <div style={s.ruleRow}>
                     <div style={{ cursor: "grab", display: "flex", alignItems: "center" }}><GripIcon /></div>
@@ -572,22 +614,22 @@ export default function SlotPriorities() {
                   <div style={s.ruleMeta}>{matchCount} slot{matchCount !== 1 ? "s" : ""} matched</div>
 
                   {/* Inline edit fields — shown when expanded */}
-                  {isExpanded && (
+                  {isExpanded && editDraft && (
                     <div style={{ marginTop: 16, borderTop: `1px solid ${colors.grey10}`, paddingTop: 16 }} onClick={(e) => e.stopPropagation()}>
                       <div style={{ ...s.condGroup, marginBottom: 0 }}>
                         <div style={s.condTitle}>Edit rule</div>
                         <div style={s.row}>
                           <span style={s.label}>Condition</span>
                           <div style={s.selectWrapper}>
-                            <select style={s.select} value={rule.type} onChange={(e) => {
+                            <select style={s.select} value={editDraft.type} onChange={(e) => {
                               const newType = e.target.value;
-                              const updated = { ...rule, type: newType };
+                              const updated = { ...editDraft, type: newType };
                               if (newType === "day" && !updated.day) updated.day = DAYS[0].label;
                               if (newType === "time_exact" && !updated.time) updated.time = "09:00";
                               if (newType === "time_range") { if (!updated.timeFrom) updated.timeFrom = "10:00"; if (!updated.timeTo) updated.timeTo = "11:00"; }
                               if (newType === "location" && !updated.location) updated.location = LOCATIONS[0];
                               if (newType === "day_time") { if (!updated.day) updated.day = DAYS[0].label; if (!updated.time) updated.time = "09:00"; }
-                              setRules(rules.map((r) => (r.id === rule.id ? updated : r)));
+                              setEditDraft(updated);
                             }}>
                               <option value="day">Day is…</option>
                               <option value="time_exact">Start time is exactly…</option>
@@ -599,11 +641,11 @@ export default function SlotPriorities() {
                           </div>
                         </div>
 
-                        {rule.type === "day" && (
+                        {editDraft.type === "day" && (
                           <div style={s.row}>
                             <span style={s.label}>Day</span>
                             <div style={s.selectWrapper}>
-                              <select style={s.select} value={rule.day} onChange={(e) => updateRuleField(rule.id, "day", e.target.value)}>
+                              <select style={s.select} value={editDraft.day} onChange={(e) => updateDraftField("day", e.target.value)}>
                                 {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
                               </select>
                               <span style={s.selectIcon}><CalendarIcon /></span>
@@ -611,36 +653,36 @@ export default function SlotPriorities() {
                           </div>
                         )}
 
-                        {rule.type === "time_exact" && (
+                        {editDraft.type === "time_exact" && (
                           <div style={s.row}>
                             <span style={s.label}>Start time</span>
                             <div style={s.inputWrapper}>
-                              <input type="time" style={{ ...s.input, width: 160 }} value={rule.time} onChange={(e) => updateRuleField(rule.id, "time", e.target.value)} />
+                              <input type="time" style={{ ...s.input, width: 160 }} value={editDraft.time} onChange={(e) => updateDraftField("time", e.target.value)} />
                               <span style={s.inputIcon}><CalendarIcon /></span>
                             </div>
                           </div>
                         )}
 
-                        {rule.type === "time_range" && (
+                        {editDraft.type === "time_range" && (
                           <div style={s.row}>
                             <span style={s.label}>Between</span>
                             <div style={s.inputWrapper}>
-                              <input type="time" style={{ ...s.input, width: 140 }} value={rule.timeFrom} onChange={(e) => updateRuleField(rule.id, "timeFrom", e.target.value)} />
+                              <input type="time" style={{ ...s.input, width: 140 }} value={editDraft.timeFrom} onChange={(e) => updateDraftField("timeFrom", e.target.value)} />
                               <span style={s.inputIcon}><CalendarIcon /></span>
                             </div>
                             <span style={{ fontSize: 12, color: colors.grey80, ...font.regular }}>and</span>
                             <div style={s.inputWrapper}>
-                              <input type="time" style={{ ...s.input, width: 140 }} value={rule.timeTo} onChange={(e) => updateRuleField(rule.id, "timeTo", e.target.value)} />
+                              <input type="time" style={{ ...s.input, width: 140 }} value={editDraft.timeTo} onChange={(e) => updateDraftField("timeTo", e.target.value)} />
                               <span style={s.inputIcon}><CalendarIcon /></span>
                             </div>
                           </div>
                         )}
 
-                        {rule.type === "location" && (
+                        {editDraft.type === "location" && (
                           <div style={s.row}>
                             <span style={s.label}>Location</span>
                             <div style={s.selectWrapper}>
-                              <select style={s.select} value={rule.location} onChange={(e) => updateRuleField(rule.id, "location", e.target.value)}>
+                              <select style={s.select} value={editDraft.location} onChange={(e) => updateDraftField("location", e.target.value)}>
                                 {LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}
                               </select>
                               <span style={s.selectIcon}><CaretDownIcon /></span>
@@ -648,12 +690,12 @@ export default function SlotPriorities() {
                           </div>
                         )}
 
-                        {rule.type === "day_time" && (
+                        {editDraft.type === "day_time" && (
                           <>
                             <div style={s.row}>
                               <span style={s.label}>Day</span>
                               <div style={s.selectWrapper}>
-                                <select style={s.select} value={rule.day} onChange={(e) => updateRuleField(rule.id, "day", e.target.value)}>
+                                <select style={s.select} value={editDraft.day} onChange={(e) => updateDraftField("day", e.target.value)}>
                                   {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
                                 </select>
                                 <span style={s.selectIcon}><CalendarIcon /></span>
@@ -662,7 +704,7 @@ export default function SlotPriorities() {
                             <div style={s.row}>
                               <span style={s.label}>Start time</span>
                               <div style={s.inputWrapper}>
-                                <input type="time" style={{ ...s.input, width: 160 }} value={rule.time} onChange={(e) => updateRuleField(rule.id, "time", e.target.value)} />
+                                <input type="time" style={{ ...s.input, width: 160 }} value={editDraft.time} onChange={(e) => updateDraftField("time", e.target.value)} />
                                 <span style={s.inputIcon}><CalendarIcon /></span>
                               </div>
                             </div>
@@ -672,12 +714,17 @@ export default function SlotPriorities() {
                         <div style={{ ...s.row, marginBottom: 0 }}>
                           <span style={s.label}>Priority</span>
                           <div style={s.inputWrapper}>
-                            <input type="number" style={{ ...s.input, width: 160 }} value={rule.priority} min={1} max={100}
-                              onChange={(e) => updateRuleField(rule.id, "priority", Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))} />
+                            <input type="number" style={{ ...s.input, width: 160 }} value={editDraft.priority} min={1} max={100}
+                              onChange={(e) => updateDraftField("priority", e.target.value)} />
                             <span style={s.inputIcon}><CalendarIcon /></span>
                           </div>
                           <span style={{ fontSize: 12, color: colors.grey40, ...font.regular, letterSpacing: 0.25, whiteSpace: "nowrap" }}>1 = highest, 100 = lowest</span>
                         </div>
+                      </div>
+
+                      <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", marginTop: 16 }}>
+                        <button style={s.btnCancel} onClick={cancelEdit}>Cancel</button>
+                        <button style={s.btnConfirm} onClick={confirmEdit}>Update Rule</button>
                       </div>
                     </div>
                   )}
@@ -815,7 +862,7 @@ export default function SlotPriorities() {
                 </span>
                 <button
                   style={{ width: 32, height: 32, border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 8, borderRadius: 4 }}
-                  onClick={() => setExpandedRuleId(null)}
+                  onClick={cancelEdit}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.purple} strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
                 </button>
