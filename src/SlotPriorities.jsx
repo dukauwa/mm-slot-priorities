@@ -78,7 +78,10 @@ function slotMatchesRule(slot, rule) {
     }
     case "location": {
       const dayMatch = !rule.day || rule.day === "All days" ? true : slot.day === rule.day;
-      return dayMatch && slot.location === rule.location;
+      const locMatch = slot.location === rule.location;
+      const timeFromOk = !rule.timeFrom || slot.startTime >= rule.timeFrom;
+      const timeToOk = !rule.timeTo || slot.startTime <= rule.timeTo;
+      return dayMatch && locMatch && timeFromOk && timeToOk;
     }
     case "day_time": {
       const dayMatch = !rule.day || rule.day === "All days" ? true : slot.day === rule.day;
@@ -96,7 +99,11 @@ function getRuleDescription(rule) {
   switch (rule.type) {
     case "day": return <span>All slots on <V>{dayLabel}</V> → Priority <V>{rule.priority}</V></span>;
     case "time_range": return <span>Slots between <V>{rule.timeFrom}</V> and <V>{rule.timeTo}</V> on <V>{dayLabel}</V> → Priority <V>{rule.priority}</V></span>;
-    case "location": return <span>Slots at <V>{rule.location}</V> on <V>{dayLabel}</V> → Priority <V>{rule.priority}</V></span>;
+    case "location": {
+      const hasTime = rule.timeFrom || rule.timeTo;
+      const timePart = hasTime ? <>{rule.timeFrom && <> from <V>{rule.timeFrom}</V></>}{rule.timeTo && <> to <V>{rule.timeTo}</V></>}</> : null;
+      return <span>Slots at <V>{rule.location}</V> on <V>{dayLabel}</V>{timePart} → Priority <V>{rule.priority}</V></span>;
+    }
     case "day_time": return <span>All slots on <V>{dayLabel}</V> at <V>{rule.time}</V> → Priority <V>{rule.priority}</V></span>;
     default: return null;
   }
@@ -193,6 +200,8 @@ export default function SlotPriorities() {
   const [condTimeRangeDay, setCondTimeRangeDay] = useState("All days");
   const [condLocation, setCondLocation] = useState("Booth A1");
   const [condLocationDay, setCondLocationDay] = useState("All days");
+  const [condLocationTimeFrom, setCondLocationTimeFrom] = useState("");
+  const [condLocationTimeTo, setCondLocationTimeTo] = useState("");
   const [condDayTime, setCondDayTime] = useState(DAYS[0].label);
   const [condDayTimeTime, setCondDayTimeTime] = useState("09:00");
   const [condPriority, setCondPriority] = useState("1");
@@ -247,7 +256,7 @@ export default function SlotPriorities() {
     switch (condType) {
       case "day": rule.day = condDay; break;
       case "time_range": rule.timeFrom = condTimeFrom; rule.timeTo = condTimeTo; rule.day = condTimeRangeDay; break;
-      case "location": rule.location = condLocation; rule.day = condLocationDay; break;
+      case "location": rule.location = condLocation; rule.day = condLocationDay; rule.timeFrom = condLocationTimeFrom || ""; rule.timeTo = condLocationTimeTo || ""; break;
       case "day_time": rule.day = condDayTime; rule.time = condDayTimeTime; break;
     }
     setRules([...rules, rule]);
@@ -337,11 +346,15 @@ export default function SlotPriorities() {
     switch (condType) {
       case "day": return <span>All slots on {h(condDay === "All days" ? "all days" : condDay)} → priority {h(p)}</span>;
       case "time_range": return <span>Slots between {h(condTimeFrom)} and {h(condTimeTo)} on {h(trDay)} → priority {h(p)}</span>;
-      case "location": return <span>Slots at {h(condLocation)} on {h(locDay)} → priority {h(p)}</span>;
+      case "location": {
+        const hasLocTime = condLocationTimeFrom || condLocationTimeTo;
+        const locTimePart = hasLocTime ? <>{condLocationTimeFrom && <> from {h(condLocationTimeFrom)}</>}{condLocationTimeTo && <> to {h(condLocationTimeTo)}</>}</> : null;
+        return <span>Slots at {h(condLocation)} on {h(locDay)}{locTimePart} → priority {h(p)}</span>;
+      }
       case "day_time": return <span>Slots on {h(condDayTime === "All days" ? "all days" : condDayTime)} at {h(condDayTimeTime)} → priority {h(p)}</span>;
       default: return null;
     }
-  }, [condType, condDay, condTimeFrom, condTimeTo, condTimeRangeDay, condLocation, condLocationDay, condDayTime, condDayTimeTime, condPriority]);
+  }, [condType, condDay, condTimeFrom, condTimeTo, condTimeRangeDay, condLocation, condLocationDay, condLocationTimeFrom, condLocationTimeTo, condDayTime, condDayTimeTime, condPriority]);
 
   /* ── Build preview data ──────────────────────────────── */
   /* Group consecutive slots by priority within each day. Slots with
@@ -784,7 +797,7 @@ export default function SlotPriorities() {
                               const updated = { ...editDraft, type: newType };
                               if (newType === "day" && !updated.day) updated.day = DAYS[0].label;
                               if (newType === "time_range") { if (!updated.timeFrom) updated.timeFrom = "09:00"; if (!updated.timeTo) updated.timeTo = "11:00"; if (!updated.day) updated.day = "All days"; }
-                              if (newType === "location") { if (!updated.location) updated.location = LOCATIONS[0]; if (!updated.day) updated.day = "All days"; }
+                              if (newType === "location") { if (!updated.location) updated.location = LOCATIONS[0]; if (!updated.day) updated.day = "All days"; if (updated.timeFrom === undefined) updated.timeFrom = ""; if (updated.timeTo === undefined) updated.timeTo = ""; }
                               if (newType === "day_time") { if (!updated.day) updated.day = DAYS[0].label; if (!updated.time) updated.time = "09:00"; }
                               setEditDraft(updated);
                             }}>
@@ -880,6 +893,20 @@ export default function SlotPriorities() {
                                   {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
                                 </select>
                                 <span style={s.selectIcon}><CalendarIcon /></span>
+                              </div>
+                            </div>
+                            <div style={s.row}>
+                              <span style={s.label}>Between</span>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: isMobile ? "wrap" : "nowrap", ...(isMobile ? { width: "100%" } : {}) }}>
+                                <div style={s.inputWrapper}>
+                                  <input type="time" style={{ ...s.input, ...(editDraft.timeFrom ? {} : { color: colors.grey40 }) }} value={editDraft.timeFrom || ""} placeholder="Start" onChange={(e) => updateDraftField("timeFrom", e.target.value)} />
+                                  <span style={s.inputIcon}><ClockIcon /></span>
+                                </div>
+                                <span style={{ fontSize: 12, color: colors.grey80, ...font.regular }}>and</span>
+                                <div style={s.inputWrapper}>
+                                  <input type="time" style={{ ...s.input, ...(editDraft.timeTo ? {} : { color: colors.grey40 }) }} value={editDraft.timeTo || ""} placeholder="End" onChange={(e) => updateDraftField("timeTo", e.target.value)} />
+                                  <span style={s.inputIcon}><ClockIcon /></span>
+                                </div>
                               </div>
                             </div>
                           </>
@@ -1007,6 +1034,20 @@ export default function SlotPriorities() {
                             {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
                           </select>
                           <span style={s.selectIcon}><CalendarIcon /></span>
+                        </div>
+                      </div>
+                      <div style={s.row}>
+                        <span style={s.label}>Between</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: isMobile ? "wrap" : "nowrap", ...(isMobile ? { width: "100%" } : {}) }}>
+                          <div style={s.inputWrapper}>
+                            <input type="time" style={{ ...s.input, ...(condLocationTimeFrom ? {} : { color: colors.grey40 }) }} value={condLocationTimeFrom} placeholder="Start" onChange={(e) => setCondLocationTimeFrom(e.target.value)} />
+                            <span style={s.inputIcon}><ClockIcon /></span>
+                          </div>
+                          <span style={{ fontSize: 12, color: colors.grey80, ...font.regular }}>and</span>
+                          <div style={s.inputWrapper}>
+                            <input type="time" style={{ ...s.input, ...(condLocationTimeTo ? {} : { color: colors.grey40 }) }} value={condLocationTimeTo} placeholder="End" onChange={(e) => setCondLocationTimeTo(e.target.value)} />
+                            <span style={s.inputIcon}><ClockIcon /></span>
+                          </div>
                         </div>
                       </div>
                     </>
