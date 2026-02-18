@@ -896,7 +896,7 @@ export default function SlotPriorities() {
                               </div>
                             </div>
                             <div style={s.row}>
-                              <span style={s.label}>Between <span style={{ ...font.regular, fontSize: 11, color: colors.grey40 }}>(optional)</span></span>
+                              <span style={s.label}>Between</span>
                               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: isMobile ? "wrap" : "nowrap", ...(isMobile ? { width: "100%" } : {}) }}>
                                 <div style={s.inputWrapper}>
                                   <input type="time" style={{ ...s.input, ...(editDraft.timeFrom ? {} : { color: colors.grey40 }) }} value={editDraft.timeFrom || ""} placeholder="Start" onChange={(e) => updateDraftField("timeFrom", e.target.value)} />
@@ -1037,7 +1037,7 @@ export default function SlotPriorities() {
                         </div>
                       </div>
                       <div style={s.row}>
-                        <span style={s.label}>Between <span style={{ ...font.regular, fontSize: 11, color: colors.grey40 }}>(optional)</span></span>
+                        <span style={s.label}>Between</span>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: isMobile ? "wrap" : "nowrap", ...(isMobile ? { width: "100%" } : {}) }}>
                           <div style={s.inputWrapper}>
                             <input type="time" style={{ ...s.input, ...(condLocationTimeFrom ? {} : { color: colors.grey40 }) }} value={condLocationTimeFrom} placeholder="Start" onChange={(e) => setCondLocationTimeFrom(e.target.value)} />
