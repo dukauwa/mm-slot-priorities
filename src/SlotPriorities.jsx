@@ -67,46 +67,25 @@ const SLOTS = generateSlots();
 
 /* ── Helpers ─────────────────────────────────────────────── */
 function slotMatchesRule(slot, rule) {
-  switch (rule.type) {
-    case "day": {
-      const dayMatch = !rule.day || rule.day === "All days" ? true : slot.day === rule.day;
-      return dayMatch;
-    }
-    case "time_range": {
-      const dayMatch = !rule.day || rule.day === "All days" ? true : slot.day === rule.day;
-      return dayMatch && slot.startTime >= rule.timeFrom && slot.startTime <= rule.timeTo;
-    }
-    case "location": {
-      const dayMatch = !rule.day || rule.day === "All days" ? true : slot.day === rule.day;
-      const locMatch = slot.location === rule.location;
-      const timeFromOk = !rule.timeFrom || slot.startTime >= rule.timeFrom;
-      const timeToOk = !rule.timeTo || slot.startTime <= rule.timeTo;
-      return dayMatch && locMatch && timeFromOk && timeToOk;
-    }
-    case "day_time": {
-      const dayMatch = !rule.day || rule.day === "All days" ? true : slot.day === rule.day;
-      return dayMatch && slot.startTime === rule.time;
-    }
-    default: return false;
-  }
+  if (rule.day && rule.day !== "All days" && slot.day !== rule.day) return false;
+  if (rule.location && slot.location !== rule.location) return false;
+  if (rule.timeFrom && slot.startTime < rule.timeFrom) return false;
+  if (rule.timeTo && slot.startTime > rule.timeTo) return false;
+  return true;
 }
 
 function getRuleDescription(rule) {
   const V = ({ children }) => (
     <span style={{ ...font.bold, color: colors.purple }}>{children}</span>
   );
-  const dayLabel = (!rule.day || rule.day === "All days") ? "all days" : rule.day;
-  switch (rule.type) {
-    case "day": return <span>All slots on <V>{dayLabel}</V> → Priority <V>{rule.priority}</V></span>;
-    case "time_range": return <span>Slots between <V>{rule.timeFrom}</V> and <V>{rule.timeTo}</V> on <V>{dayLabel}</V> → Priority <V>{rule.priority}</V></span>;
-    case "location": {
-      const hasTime = rule.timeFrom || rule.timeTo;
-      const timePart = hasTime ? <>{rule.timeFrom && <> from <V>{rule.timeFrom}</V></>}{rule.timeTo && <> to <V>{rule.timeTo}</V></>}</> : null;
-      return <span>Slots at <V>{rule.location}</V> on <V>{dayLabel}</V>{timePart} → Priority <V>{rule.priority}</V></span>;
-    }
-    case "day_time": return <span>All slots on <V>{dayLabel}</V> at <V>{rule.time}</V> → Priority <V>{rule.priority}</V></span>;
-    default: return null;
-  }
+  const parts = [];
+  if (rule.location) parts.push(<span key="loc">at <V>{rule.location}</V></span>);
+  if (rule.day && rule.day !== "All days") parts.push(<span key="day">on <V>{rule.day}</V></span>);
+  if (rule.timeFrom && rule.timeTo) parts.push(<span key="time">between <V>{rule.timeFrom}</V> and <V>{rule.timeTo}</V></span>);
+  else if (rule.timeFrom) parts.push(<span key="from">from <V>{rule.timeFrom}</V></span>);
+  else if (rule.timeTo) parts.push(<span key="to">until <V>{rule.timeTo}</V></span>);
+  if (parts.length === 0) return <span>All slots → Priority <V>{rule.priority}</V></span>;
+  return <span>Slots {parts.reduce((acc, part, i) => i === 0 ? [part] : [...acc, " ", part], [])} → Priority <V>{rule.priority}</V></span>;
 }
 
 /* ── Icons (Figma design system) ──────────────────────────── */
@@ -192,19 +171,12 @@ export default function SlotPriorities() {
   const [editDraft, setEditDraft] = useState(null);
   const [toast, setToast] = useState(null);
 
-  // Builder state
-  const [condType, setCondType] = useState("day");
-  const [condDay, setCondDay] = useState(DAYS[0].label);
-  const [condTimeFrom, setCondTimeFrom] = useState("09:00");
-  const [condTimeTo, setCondTimeTo] = useState("11:00");
-  const [condTimeRangeDay, setCondTimeRangeDay] = useState("All days");
-  const [condLocation, setCondLocation] = useState("Booth A1");
-  const [condLocationDay, setCondLocationDay] = useState("All days");
-  const [condLocationTimeFrom, setCondLocationTimeFrom] = useState("");
-  const [condLocationTimeTo, setCondLocationTimeTo] = useState("");
-  const [condDayTime, setCondDayTime] = useState(DAYS[0].label);
-  const [condDayTimeTime, setCondDayTimeTime] = useState("09:00");
-  const [condPriority, setCondPriority] = useState("1");
+  // Builder state — all fields always present, leave empty for "any"
+  const [newDay, setNewDay] = useState("");
+  const [newLocation, setNewLocation] = useState("");
+  const [newTimeFrom, setNewTimeFrom] = useState("");
+  const [newTimeTo, setNewTimeTo] = useState("");
+  const [newPriority, setNewPriority] = useState("1");
 
   const expandedCardRef = useRef(null);
   const [dragIdx, setDragIdx] = useState(null);
@@ -251,17 +223,12 @@ export default function SlotPriorities() {
   }, []);
 
   const addRule = () => {
-    const priority = Math.max(1, Math.min(100, parseInt(condPriority) || 1));
-    const rule = { id: idCounter, type: condType, priority };
-    switch (condType) {
-      case "day": rule.day = condDay; break;
-      case "time_range": rule.timeFrom = condTimeFrom; rule.timeTo = condTimeTo; rule.day = condTimeRangeDay; break;
-      case "location": rule.location = condLocation; rule.day = condLocationDay; rule.timeFrom = condLocationTimeFrom || ""; rule.timeTo = condLocationTimeTo || ""; break;
-      case "day_time": rule.day = condDayTime; rule.time = condDayTimeTime; break;
-    }
+    const priority = Math.max(1, Math.min(100, parseInt(newPriority) || 1));
+    const rule = { id: idCounter, day: newDay, location: newLocation, timeFrom: newTimeFrom, timeTo: newTimeTo, priority };
     setRules([...rules, rule]);
     setIdCounter(idCounter + 1);
     setShowBuilder(false);
+    setNewDay(""); setNewLocation(""); setNewTimeFrom(""); setNewTimeTo(""); setNewPriority("1");
     showToastMsg("Rule added");
   };
 
@@ -339,22 +306,16 @@ export default function SlotPriorities() {
   }, [rules, sortedSlots]);
 
   const nlPreview = useMemo(() => {
-    const p = condPriority;
     const h = (v) => <strong style={{ color: colors.purple }}>{v}</strong>;
-    const trDay = condTimeRangeDay === "All days" ? "all days" : condTimeRangeDay;
-    const locDay = condLocationDay === "All days" ? "all days" : condLocationDay;
-    switch (condType) {
-      case "day": return <span>All slots on {h(condDay === "All days" ? "all days" : condDay)} → priority {h(p)}</span>;
-      case "time_range": return <span>Slots between {h(condTimeFrom)} and {h(condTimeTo)} on {h(trDay)} → priority {h(p)}</span>;
-      case "location": {
-        const hasLocTime = condLocationTimeFrom || condLocationTimeTo;
-        const locTimePart = hasLocTime ? <>{condLocationTimeFrom && <> from {h(condLocationTimeFrom)}</>}{condLocationTimeTo && <> to {h(condLocationTimeTo)}</>}</> : null;
-        return <span>Slots at {h(condLocation)} on {h(locDay)}{locTimePart} → priority {h(p)}</span>;
-      }
-      case "day_time": return <span>Slots on {h(condDayTime === "All days" ? "all days" : condDayTime)} at {h(condDayTimeTime)} → priority {h(p)}</span>;
-      default: return null;
-    }
-  }, [condType, condDay, condTimeFrom, condTimeTo, condTimeRangeDay, condLocation, condLocationDay, condLocationTimeFrom, condLocationTimeTo, condDayTime, condDayTimeTime, condPriority]);
+    const parts = [];
+    if (newLocation) parts.push(<span key="loc">at {h(newLocation)}</span>);
+    if (newDay && newDay !== "All days") parts.push(<span key="day">on {h(newDay)}</span>);
+    if (newTimeFrom && newTimeTo) parts.push(<span key="time">between {h(newTimeFrom)} and {h(newTimeTo)}</span>);
+    else if (newTimeFrom) parts.push(<span key="from">from {h(newTimeFrom)}</span>);
+    else if (newTimeTo) parts.push(<span key="to">until {h(newTimeTo)}</span>);
+    if (parts.length === 0) return <span>All slots → priority {h(newPriority)}</span>;
+    return <span>Slots {parts.reduce((acc, part, i) => i === 0 ? [part] : [...acc, " ", part], [])} → priority {h(newPriority)}</span>;
+  }, [newDay, newLocation, newTimeFrom, newTimeTo, newPriority]);
 
   /* ── Build preview data ──────────────────────────────── */
   /* Group consecutive slots by priority within each day. Slots with
@@ -788,130 +749,41 @@ export default function SlotPriorities() {
                   {isExpanded && editDraft && (
                     <div style={{ marginTop: 16, borderTop: `1px solid ${colors.grey10}`, paddingTop: 16 }} onClick={(e) => e.stopPropagation()}>
                       <div style={{ ...s.condGroup, marginBottom: 0 }}>
-                        <div style={s.condTitle}>Edit rule</div>
+                        <div style={s.condTitle}>Edit rule — leave fields empty for "any"</div>
                         <div style={s.row}>
-                          <span style={s.label}>Condition</span>
+                          <span style={s.label}>Day</span>
                           <div style={s.selectWrapper}>
-                            <select style={s.select} value={editDraft.type} onChange={(e) => {
-                              const newType = e.target.value;
-                              const updated = { ...editDraft, type: newType };
-                              if (newType === "day" && !updated.day) updated.day = DAYS[0].label;
-                              if (newType === "time_range") { if (!updated.timeFrom) updated.timeFrom = "09:00"; if (!updated.timeTo) updated.timeTo = "11:00"; if (!updated.day) updated.day = "All days"; }
-                              if (newType === "location") { if (!updated.location) updated.location = LOCATIONS[0]; if (!updated.day) updated.day = "All days"; if (updated.timeFrom === undefined) updated.timeFrom = ""; if (updated.timeTo === undefined) updated.timeTo = ""; }
-                              if (newType === "day_time") { if (!updated.day) updated.day = DAYS[0].label; if (!updated.time) updated.time = "09:00"; }
-                              setEditDraft(updated);
-                            }}>
-                              <option value="day">Day is…</option>
-                              <option value="day_time">Day + Start time are…</option>
-                              <option value="time_range">Start time is between…</option>
-                              <option value="location">Location on day…</option>
+                            <select style={s.select} value={editDraft.day || ""} onChange={(e) => updateDraftField("day", e.target.value)}>
+                              <option value="">All days</option>
+                              {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
+                            </select>
+                            <span style={s.selectIcon}><CalendarIcon /></span>
+                          </div>
+                        </div>
+                        <div style={s.row}>
+                          <span style={s.label}>Location</span>
+                          <div style={s.selectWrapper}>
+                            <select style={s.select} value={editDraft.location || ""} onChange={(e) => updateDraftField("location", e.target.value)}>
+                              <option value="">Any location</option>
+                              {LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}
                             </select>
                             <span style={s.selectIcon}><CaretDownIcon /></span>
                           </div>
                         </div>
-
-                        {editDraft.type === "day" && (
-                          <div style={s.row}>
-                            <span style={s.label}>Day</span>
-                            <div style={s.selectWrapper}>
-                              <select style={s.select} value={editDraft.day} onChange={(e) => updateDraftField("day", e.target.value)}>
-                                <option value="All days">All days</option>
-                                {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
-                              </select>
-                              <span style={s.selectIcon}><CalendarIcon /></span>
-                            </div>
+                        <div style={s.row}>
+                          <span style={s.label}>Time from</span>
+                          <div style={s.inputWrapper}>
+                            <input type="time" style={{ ...s.input, ...(editDraft.timeFrom ? {} : { color: colors.grey40 }) }} value={editDraft.timeFrom || ""} onChange={(e) => updateDraftField("timeFrom", e.target.value)} />
+                            <span style={s.inputIcon}><ClockIcon /></span>
                           </div>
-                        )}
-
-                        {editDraft.type === "day_time" && (
-                          <>
-                            <div style={s.row}>
-                              <span style={s.label}>Day</span>
-                              <div style={s.selectWrapper}>
-                                <select style={s.select} value={editDraft.day} onChange={(e) => updateDraftField("day", e.target.value)}>
-                                  <option value="All days">All days</option>
-                                  {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
-                                </select>
-                                <span style={s.selectIcon}><CalendarIcon /></span>
-                              </div>
-                            </div>
-                            <div style={s.row}>
-                              <span style={s.label}>Start time</span>
-                              <div style={s.inputWrapper}>
-                                <input type="time" style={s.input} value={editDraft.time} onChange={(e) => updateDraftField("time", e.target.value)} />
-                                <span style={s.inputIcon}><ClockIcon /></span>
-                              </div>
-                            </div>
-                          </>
-                        )}
-
-                        {editDraft.type === "time_range" && (
-                          <>
-                            <div style={s.row}>
-                              <span style={s.label}>Day</span>
-                              <div style={s.selectWrapper}>
-                                <select style={s.select} value={editDraft.day || "All days"} onChange={(e) => updateDraftField("day", e.target.value)}>
-                                  <option value="All days">All days</option>
-                                  {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
-                                </select>
-                                <span style={s.selectIcon}><CalendarIcon /></span>
-                              </div>
-                            </div>
-                            <div style={s.row}>
-                              <span style={s.label}>Between</span>
-                              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: isMobile ? "wrap" : "nowrap", ...(isMobile ? { width: "100%" } : {}) }}>
-                                <div style={s.inputWrapper}>
-                                  <input type="time" style={s.input} value={editDraft.timeFrom} onChange={(e) => updateDraftField("timeFrom", e.target.value)} />
-                                  <span style={s.inputIcon}><ClockIcon /></span>
-                                </div>
-                                <span style={{ fontSize: 12, color: colors.grey80, ...font.regular }}>and</span>
-                                <div style={s.inputWrapper}>
-                                  <input type="time" style={s.input} value={editDraft.timeTo} onChange={(e) => updateDraftField("timeTo", e.target.value)} />
-                                  <span style={s.inputIcon}><ClockIcon /></span>
-                                </div>
-                              </div>
-                            </div>
-                          </>
-                        )}
-
-                        {editDraft.type === "location" && (
-                          <>
-                            <div style={s.row}>
-                              <span style={s.label}>Location</span>
-                              <div style={s.selectWrapper}>
-                                <select style={s.select} value={editDraft.location} onChange={(e) => updateDraftField("location", e.target.value)}>
-                                  {LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}
-                                </select>
-                                <span style={s.selectIcon}><CaretDownIcon /></span>
-                              </div>
-                            </div>
-                            <div style={s.row}>
-                              <span style={s.label}>Day</span>
-                              <div style={s.selectWrapper}>
-                                <select style={s.select} value={editDraft.day || "All days"} onChange={(e) => updateDraftField("day", e.target.value)}>
-                                  <option value="All days">All days</option>
-                                  {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
-                                </select>
-                                <span style={s.selectIcon}><CalendarIcon /></span>
-                              </div>
-                            </div>
-                            <div style={s.row}>
-                              <span style={s.label}>Between</span>
-                              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: isMobile ? "wrap" : "nowrap", ...(isMobile ? { width: "100%" } : {}) }}>
-                                <div style={s.inputWrapper}>
-                                  <input type="time" style={{ ...s.input, ...(editDraft.timeFrom ? {} : { color: colors.grey40 }) }} value={editDraft.timeFrom || ""} placeholder="Start" onChange={(e) => updateDraftField("timeFrom", e.target.value)} />
-                                  <span style={s.inputIcon}><ClockIcon /></span>
-                                </div>
-                                <span style={{ fontSize: 12, color: colors.grey80, ...font.regular }}>and</span>
-                                <div style={s.inputWrapper}>
-                                  <input type="time" style={{ ...s.input, ...(editDraft.timeTo ? {} : { color: colors.grey40 }) }} value={editDraft.timeTo || ""} placeholder="End" onChange={(e) => updateDraftField("timeTo", e.target.value)} />
-                                  <span style={s.inputIcon}><ClockIcon /></span>
-                                </div>
-                              </div>
-                            </div>
-                          </>
-                        )}
-
+                        </div>
+                        <div style={s.row}>
+                          <span style={s.label}>Time to</span>
+                          <div style={s.inputWrapper}>
+                            <input type="time" style={{ ...s.input, ...(editDraft.timeTo ? {} : { color: colors.grey40 }) }} value={editDraft.timeTo || ""} onChange={(e) => updateDraftField("timeTo", e.target.value)} />
+                            <span style={s.inputIcon}><ClockIcon /></span>
+                          </div>
+                        </div>
                         <div style={{ ...s.row, marginBottom: 0 }}>
                           <span style={s.label}>Priority</span>
                           <div style={s.inputWrapper}>
@@ -938,125 +810,45 @@ export default function SlotPriorities() {
                 <div style={s.builderTitle}>New Rule</div>
 
                 <div style={s.condGroup}>
+                  <div style={s.condTitle}>Fill in whichever fields you want to match. Leave empty for "any".</div>
                   <div style={s.row}>
-                    <span style={s.label}>Condition</span>
+                    <span style={s.label}>Day</span>
                     <div style={s.selectWrapper}>
-                      <select style={s.select} value={condType} onChange={(e) => setCondType(e.target.value)}>
-                        <option value="day">Day is…</option>
-                        <option value="day_time">Day + Start time are…</option>
-                        <option value="time_range">Start time is between…</option>
-                        <option value="location">Location on day…</option>
+                      <select style={s.select} value={newDay} onChange={(e) => setNewDay(e.target.value)}>
+                        <option value="">All days</option>
+                        {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
+                      </select>
+                      <span style={s.selectIcon}><CalendarIcon /></span>
+                    </div>
+                  </div>
+                  <div style={s.row}>
+                    <span style={s.label}>Location</span>
+                    <div style={s.selectWrapper}>
+                      <select style={s.select} value={newLocation} onChange={(e) => setNewLocation(e.target.value)}>
+                        <option value="">Any location</option>
+                        {LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}
                       </select>
                       <span style={s.selectIcon}><CaretDownIcon /></span>
                     </div>
                   </div>
-
-                  {condType === "day" && (
-                    <div style={s.row}>
-                      <span style={s.label}>Day</span>
-                      <div style={s.selectWrapper}>
-                        <select style={s.select} value={condDay} onChange={(e) => setCondDay(e.target.value)}>
-                          <option value="All days">All days</option>
-                          {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
-                        </select>
-                        <span style={s.selectIcon}><CalendarIcon /></span>
-                      </div>
+                  <div style={s.row}>
+                    <span style={s.label}>Time from</span>
+                    <div style={s.inputWrapper}>
+                      <input type="time" style={{ ...s.input, ...(newTimeFrom ? {} : { color: colors.grey40 }) }} value={newTimeFrom} onChange={(e) => setNewTimeFrom(e.target.value)} />
+                      <span style={s.inputIcon}><ClockIcon /></span>
                     </div>
-                  )}
-
-                  {condType === "day_time" && (
-                    <>
-                      <div style={s.row}>
-                        <span style={s.label}>Day</span>
-                        <div style={s.selectWrapper}>
-                          <select style={s.select} value={condDayTime} onChange={(e) => setCondDayTime(e.target.value)}>
-                            <option value="All days">All days</option>
-                            {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
-                          </select>
-                          <span style={s.selectIcon}><CalendarIcon /></span>
-                        </div>
-                      </div>
-                      <div style={s.row}>
-                        <span style={s.label}>Start time</span>
-                        <div style={s.inputWrapper}>
-                          <input type="time" style={s.input} value={condDayTimeTime} onChange={(e) => setCondDayTimeTime(e.target.value)} />
-                          <span style={s.inputIcon}><ClockIcon /></span>
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {condType === "time_range" && (
-                    <>
-                      <div style={s.row}>
-                        <span style={s.label}>Day</span>
-                        <div style={s.selectWrapper}>
-                          <select style={s.select} value={condTimeRangeDay} onChange={(e) => setCondTimeRangeDay(e.target.value)}>
-                            <option value="All days">All days</option>
-                            {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
-                          </select>
-                          <span style={s.selectIcon}><CalendarIcon /></span>
-                        </div>
-                      </div>
-                      <div style={s.row}>
-                        <span style={s.label}>Between</span>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: isMobile ? "wrap" : "nowrap", ...(isMobile ? { width: "100%" } : {}) }}>
-                          <div style={s.inputWrapper}>
-                            <input type="time" style={s.input} value={condTimeFrom} onChange={(e) => setCondTimeFrom(e.target.value)} />
-                            <span style={s.inputIcon}><ClockIcon /></span>
-                          </div>
-                          <span style={{ fontSize: 12, color: colors.grey80, ...font.regular }}>and</span>
-                          <div style={s.inputWrapper}>
-                            <input type="time" style={s.input} value={condTimeTo} onChange={(e) => setCondTimeTo(e.target.value)} />
-                            <span style={s.inputIcon}><ClockIcon /></span>
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {condType === "location" && (
-                    <>
-                      <div style={s.row}>
-                        <span style={s.label}>Location</span>
-                        <div style={s.selectWrapper}>
-                          <select style={s.select} value={condLocation} onChange={(e) => setCondLocation(e.target.value)}>
-                            {LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}
-                          </select>
-                          <span style={s.selectIcon}><CaretDownIcon /></span>
-                        </div>
-                      </div>
-                      <div style={s.row}>
-                        <span style={s.label}>Day</span>
-                        <div style={s.selectWrapper}>
-                          <select style={s.select} value={condLocationDay} onChange={(e) => setCondLocationDay(e.target.value)}>
-                            <option value="All days">All days</option>
-                            {DAYS.map((d) => <option key={d.label} value={d.label}>{d.label}</option>)}
-                          </select>
-                          <span style={s.selectIcon}><CalendarIcon /></span>
-                        </div>
-                      </div>
-                      <div style={s.row}>
-                        <span style={s.label}>Between</span>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: isMobile ? "wrap" : "nowrap", ...(isMobile ? { width: "100%" } : {}) }}>
-                          <div style={s.inputWrapper}>
-                            <input type="time" style={{ ...s.input, ...(condLocationTimeFrom ? {} : { color: colors.grey40 }) }} value={condLocationTimeFrom} placeholder="Start" onChange={(e) => setCondLocationTimeFrom(e.target.value)} />
-                            <span style={s.inputIcon}><ClockIcon /></span>
-                          </div>
-                          <span style={{ fontSize: 12, color: colors.grey80, ...font.regular }}>and</span>
-                          <div style={s.inputWrapper}>
-                            <input type="time" style={{ ...s.input, ...(condLocationTimeTo ? {} : { color: colors.grey40 }) }} value={condLocationTimeTo} placeholder="End" onChange={(e) => setCondLocationTimeTo(e.target.value)} />
-                            <span style={s.inputIcon}><ClockIcon /></span>
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  )}
-
+                  </div>
+                  <div style={s.row}>
+                    <span style={s.label}>Time to</span>
+                    <div style={s.inputWrapper}>
+                      <input type="time" style={{ ...s.input, ...(newTimeTo ? {} : { color: colors.grey40 }) }} value={newTimeTo} onChange={(e) => setNewTimeTo(e.target.value)} />
+                      <span style={s.inputIcon}><ClockIcon /></span>
+                    </div>
+                  </div>
                   <div style={{ ...s.row, marginBottom: 0 }}>
                     <span style={s.label}>Priority</span>
                     <div style={s.inputWrapper}>
-                      <input type="number" style={s.inputNoIcon} value={condPriority} min={1} max={100} onChange={(e) => setCondPriority(e.target.value)} />
+                      <input type="number" style={s.inputNoIcon} value={newPriority} min={1} max={100} onChange={(e) => setNewPriority(e.target.value)} />
                     </div>
                     <span style={{ fontSize: 12, color: colors.grey40, ...font.regular, letterSpacing: 0.25, whiteSpace: "nowrap" }}>1 = highest, 100 = lowest</span>
                   </div>
